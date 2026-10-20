@@ -1,5 +1,8 @@
 #!/bin/sh
 HERE="$(dirname "$(readlink -f "$0")")"
-export QT_PLUGIN_PATH="$HERE/usr/bin/_internal/PyQt6/Qt6/plugins"
-export QT_QPA_PLATFORM_PLUGIN_PATH="$QT_PLUGIN_PATH/platforms"
+QT_PLUGIN_PATH="$(find "$HERE/usr/bin/_internal" -type d -path '*/PyQt6/Qt6/plugins' -print -quit)"
+if [ -n "$QT_PLUGIN_PATH" ]; then
+    export QT_PLUGIN_PATH
+    export QT_QPA_PLATFORM_PLUGIN_PATH="$QT_PLUGIN_PATH/platforms"
+fi
 exec "$HERE/usr/bin/M4A2MP3" "$@"
