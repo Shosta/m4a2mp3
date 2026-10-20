@@ -32,6 +32,13 @@ jobs:
           --exclude-module PyQt5
           --distpath dist
           --workpath build
+          --hidden-import ui
+          --hidden-import ui.qt_compat
+          --hidden-import ui.drop_tree
+          --hidden-import ui.options
+          --hidden-import ui.artwork
+          --hidden-import ui.source_tree
+          --hidden-import ui.result_tree
           gui_qt.py
 
       - name: Create AppDir
