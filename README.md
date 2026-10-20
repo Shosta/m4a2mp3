@@ -1,4 +1,4 @@
-# m4a2mp3
+# m4a-2-mp3
 
 Convertit récursivement des fichiers `.m4a` (par exemple ripés avec iTunes) en `.mp3`, en conservant les métadonnées (titre, artiste, album, pochette).
 
