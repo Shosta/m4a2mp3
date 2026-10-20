@@ -1,0 +1,5 @@
+#!/bin/sh
+HERE="$(dirname "$(readlink -f "$0")")"
+export QT_PLUGIN_PATH="$HERE/usr/bin/_internal/PyQt6/Qt6/plugins"
+export QT_QPA_PLATFORM_PLUGIN_PATH="$QT_PLUGIN_PATH/platforms"
+exec "$HERE/usr/bin/M4A2MP3" "$@"

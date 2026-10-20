@@ -15,6 +15,27 @@ winget install ffmpeg        # Windows
 
 ## Utilisation
 
+### Interface graphique Qt
+
+L’interface peut utiliser PyQt6 ou PyQt5 s’ils sont déjà installés dans votre environnement Python. Lancez-la avec :
+
+```bash
+python3 gui_qt.py
+```
+
+Une AppImage Linux x86_64 précompilée est disponible dans `M4A2MP3-x86_64.AppImage`. Rendez-la exécutable puis lancez-la :
+
+```bash
+chmod +x M4A2MP3-x86_64.AppImage
+./M4A2MP3-x86_64.AppImage
+```
+
+FFmpeg doit être installé sur le système et disponible dans le `PATH`.
+
+Déposez des fichiers `.m4a` ou des dossiers dans la liste de gauche ; les dossiers sont parcourus récursivement. La liste de droite affiche les résultats au fur et à mesure. Les MP3 existants sont écrasés par défaut ; les options de qualité, de parallélisme, d’écrasement et de suppression des sources sont disponibles dans la fenêtre.
+
+### Ligne de commande
+
 ```bash
 # Conversion simple (garde les .m4a)
 python3 m4a2mp3.py ~/Music/iTunes

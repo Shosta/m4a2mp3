@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=M4A2MP3
+Comment=Convertir des fichiers audio M4A en MP3
+Exec=M4A2MP3
+Icon=m4a2mp3
+Categories=AudioVideo;Audio;
+Terminal=false
