@@ -30,7 +30,7 @@ chmod +x M4A2MP3-x86_64.AppImage
 ./M4A2MP3-x86_64.AppImage
 ```
 
-FFmpeg doit être installé sur le système et disponible dans le `PATH`.
+FFmpeg doit être installé sur le système et disponible dans le `PATH`. L’icône de l’application provient de `ui/assets/m4a-2-mp3-icon.png`.
 
 Déposez des fichiers `.m4a` ou des dossiers dans la liste de gauche ; les dossiers sont parcourus récursivement. La liste de droite affiche les résultats au fur et à mesure. Les MP3 existants sont écrasés par défaut ; les options de qualité, de parallélisme, d’écrasement et de suppression des sources sont disponibles dans la fenêtre.
 

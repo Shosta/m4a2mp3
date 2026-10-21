@@ -14,18 +14,18 @@ from ui.qt_compat import (
     QCheckBox,
     QFileDialog,
     QHBoxLayout,
+    QIcon,
     QLabel,
+    QMainWindow,
     QMessageBox,
     QProgressBar,
     QPushButton,
+    QSize,
     QStyle,
     QTimer,
     QTreeWidget,
     QVBoxLayout,
     QWidget,
-    QMainWindow,
-    QIcon,
-    QSize,
 )
 from ui.result_tree import ResultTree
 from ui.source_tree import SourceTree
@@ -36,6 +36,7 @@ class ConvertisseurQt(QMainWindow):
     def __init__(self) -> None:
         super().__init__()
         self.setWindowTitle("Convertisseur M4A vers MP3")
+        self.setWindowIcon(QIcon(str(Path(__file__).with_name("m4a2mp3.png"))))
         self.resize(1050, 620)
         self.executor: Optional[ThreadPoolExecutor] = None
         self.pending: Set[Future] = set()
