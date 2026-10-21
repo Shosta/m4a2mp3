@@ -39,17 +39,18 @@ jobs:
           --hidden-import ui.artwork
           --hidden-import ui.source_tree
           --hidden-import ui.result_tree
+          --add-data m4a2mp3.png:.
           gui_qt.py
 
       - name: Create AppDir
         run: |
-          mkdir -p AppDir/usr/bin AppDir/usr/share/applications AppDir/usr/share/icons/hicolor/128x128/apps
+          mkdir -p AppDir/usr/bin AppDir/usr/share/applications AppDir/usr/share/icons/hicolor/512x512/apps
           cp -a dist/M4A2MP3/. AppDir/usr/bin/
           install -m 755 AppRun AppDir/AppRun
           install -m 644 m4a2mp3.desktop AppDir/m4a2mp3.desktop
           install -m 644 m4a2mp3.desktop AppDir/usr/share/applications/m4a2mp3.desktop
-          install -m 644 m4a2mp3.svg AppDir/m4a2mp3.svg
-          install -m 644 m4a2mp3.svg AppDir/usr/share/icons/hicolor/128x128/apps/m4a2mp3.svg
+          install -m 644 m4a2mp3.png AppDir/m4a2mp3.png
+          install -m 644 m4a2mp3.png AppDir/usr/share/icons/hicolor/512x512/apps/m4a2mp3.png
 
       - name: Build AppImage
         run: |

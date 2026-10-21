@@ -11,6 +11,17 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 
 
+def _ffmpeg_environment() -> dict[str, str]:
+    env = os.environ.copy()
+    if getattr(sys, "frozen", False):
+        original_library_path = env.pop("LD_LIBRARY_PATH_ORIG", None)
+        if original_library_path is None:
+            env.pop("LD_LIBRARY_PATH", None)
+        else:
+            env["LD_LIBRARY_PATH"] = original_library_path
+    return env
+
+
 def convertir(src: Path, qualite: str, supprimer: bool, ecraser: bool) -> tuple[Path, str]:
     """Convertit un fichier. Retourne (fichier, statut)."""
     dst = src.with_suffix(".mp3")
@@ -38,7 +49,9 @@ def convertir(src: Path, qualite: str, supprimer: bool, ecraser: bool) -> tuple[
             str(tmp_path),
         ]
 
-        result = subprocess.run(cmd, capture_output=True, text=True)
+        result = subprocess.run(
+            cmd, capture_output=True, text=True, env=_ffmpeg_environment()
+        )
         if result.returncode != 0:
             return src, f"ERREUR : {result.stderr.strip()}"
 
