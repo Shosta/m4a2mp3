@@ -4,6 +4,8 @@ from concurrent.futures import Future, ThreadPoolExecutor
 from pathlib import Path
 from typing import Dict, List, Optional, Set
 
+from m4a2mp3 import _ffmpeg_environment
+
 from .qt_compat import QIcon, QPixmap, QSize, Qt, QTimer, QTreeWidget, QTreeWidgetItem
 
 
@@ -47,6 +49,7 @@ class ArtworkManager:
                     "-an", "-map", "0:v:0", "-frames:v", "1", str(temp_path),
                 ],
                 capture_output=True,
+                env=_ffmpeg_environment(),
                 timeout=15,
                 check=False,
             )
