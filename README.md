@@ -37,14 +37,14 @@ Déposez des fichiers `.m4a` ou des dossiers dans la liste de gauche ; les dossi
 ### Ligne de commande
 
 ```bash
-# Conversion simple (garde les .m4a)
-python3 m4a2mp3.py ~/Music/iTunes
+# Conversion simple (garde les .m4a et écrase les MP3 existants)
+python3 m4a2mp3.py --dossier ~/Music/iTunes
 
-# Qualité ~190 kbps, 8 conversions en parallèle
-python3 m4a2mp3.py ~/Music/iTunes -q 2 -j 8
+# Qualité ~190 kbps, 8 conversions en parallèle, sans écraser les MP3 existants
+python3 m4a2mp3.py --dossier ~/Music/iTunes -q 2 -j 8 --ne-pas-ecraser
 
 # Supprime les originaux après conversion réussie
-python3 m4a2mp3.py ~/Music/iTunes --supprimer
+python3 m4a2mp3.py --dossier ~/Music/iTunes --supprimer
 ```
 
 ## Options
@@ -54,7 +54,8 @@ python3 m4a2mp3.py ~/Music/iTunes --supprimer
 | `-q`, `--qualite` | Qualité VBR LAME de 0 (max, ~245 kbps) à 9 (min). Défaut : 0 |
 | `-j`, `--jobs` | Conversions en parallèle. Défaut : 4 |
 | `--supprimer` | Supprime le `.m4a` après conversion réussie |
-| `--ecraser` | Écrase les `.mp3` déjà existants |
+| `--ecraser` | Écrase les `.mp3` déjà existants (par défaut) |
+| `--ne-pas-ecraser` | Ignore les `.mp3` déjà existants |
 
 ## Commande ffmpeg pour un seul fichier
 

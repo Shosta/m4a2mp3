@@ -32,6 +32,7 @@ jobs:
           --exclude-module PyQt5
           --distpath dist
           --workpath build
+          --hidden-import core
           --hidden-import ui
           --hidden-import ui.qt_compat
           --hidden-import ui.drop_tree

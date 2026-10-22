@@ -2,6 +2,8 @@ import os
 from pathlib import Path
 from typing import Dict, List, Optional, Set
 
+from core import discover_m4a, is_m4a
+
 from .artwork import ArtworkManager
 from .drop_tree import DropTreeWidget
 from .qt_compat import QIcon, QStyle, Qt, QTreeWidgetItem
@@ -28,22 +30,20 @@ class SourceTree:
             path = path.resolve()
             if path.is_dir():
                 self._add_directory(path)
-            elif path.is_file() and path.suffix.lower() == ".m4a" and not path.name.startswith("._"):
+            elif is_m4a(path):
                 self._add_file(path, reparent=False, root=path.parent)
         except OSError as exc:
             self.status_callback(f"Impossible d’inspecter {path}: {exc}")
 
     def _add_directory(self, path: Path, parent: Optional[QTreeWidgetItem] = None) -> Optional[QTreeWidgetItem]:
-        audio_files = []
-        try:
-            for candidate in path.rglob("*"):
-                try:
-                    if candidate.is_file() and candidate.suffix.lower() == ".m4a" and not candidate.name.startswith("._"):
-                        audio_files.append(candidate)
-                except OSError as exc:
-                    self.status_callback(f"Impossible d’inspecter {candidate}: {exc}")
-        except OSError as exc:
-            self.status_callback(f"Impossible de parcourir {path}: {exc}")
+        audio_files = discover_m4a(
+            path,
+            on_error=lambda candidate, exc: self.status_callback(
+                f"Impossible d’inspecter {candidate}: {exc}"
+                if candidate != path
+                else f"Impossible de parcourir {path}: {exc}"
+            ),
+        )
         if not audio_files:
             return None
 
