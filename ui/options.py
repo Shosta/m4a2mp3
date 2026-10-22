@@ -1,3 +1,5 @@
+from core import DEFAULT_JOBS, DEFAULT_QUALITY, MAX_JOBS, MIN_JOBS
+
 from .qt_compat import QComboBox, QHBoxLayout, QLabel, QSpinBox, QVBoxLayout
 
 
@@ -20,7 +22,7 @@ class ConversionOptions:
         ]
         for value, label in enumerate(quality_levels):
             self.quality_combo.addItem(label, str(value))
-        self.quality_combo.setCurrentIndex(0)
+        self.quality_combo.setCurrentIndex(int(DEFAULT_QUALITY))
         self.quality_combo.setToolTip(
             "Encodage VBR : le débit varie selon le contenu audio. "
             "Une qualité supérieure produit généralement un fichier plus volumineux."
@@ -37,8 +39,8 @@ class ConversionOptions:
         self.jobs_label = QLabel("Conversions simultanées")
         layout.addWidget(self.jobs_label)
         self.jobs_spin = QSpinBox()
-        self.jobs_spin.setRange(1, 6)
-        self.jobs_spin.setValue(4)
+        self.jobs_spin.setRange(MIN_JOBS, MAX_JOBS)
+        self.jobs_spin.setValue(DEFAULT_JOBS)
         self.jobs_spin.valueChanged.connect(self._update_jobs_label)
         layout.addWidget(self.jobs_spin)
 

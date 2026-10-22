@@ -1,10 +1,15 @@
 #!/usr/bin/env python3
 
-import shutil
 import sys
-from concurrent.futures import Future, ThreadPoolExecutor
 from pathlib import Path
-from typing import Optional, Set
+from core import (
+    ConversionOptions as CoreConversionOptions,
+    ConversionResult,
+    ConversionStatus,
+    convert_file,
+    ffmpeg_available,
+)
+from ui.qt_compat import QObject, QRunnable, QThreadPool, pyqtSignal
 
 from ui.artwork import ArtworkManager
 from ui.drop_tree import DropTreeWidget
@@ -22,14 +27,32 @@ from ui.qt_compat import (
     QPushButton,
     QSize,
     QStyle,
-    QTimer,
     QTreeWidget,
     QVBoxLayout,
     QWidget,
 )
 from ui.result_tree import ResultTree
 from ui.source_tree import SourceTree
-from m4a2mp3 import convertir
+
+
+class ConversionSignals(QObject):
+    finished = pyqtSignal(object)
+
+
+class ConversionTask(QRunnable):
+    def __init__(self, source: Path, options: CoreConversionOptions) -> None:
+        super().__init__()
+        self.source = source
+        self.options = options
+        self.signals = ConversionSignals()
+        self.setAutoDelete(False)
+
+    def run(self) -> None:
+        try:
+            result = convert_file(self.source, self.options)
+        except Exception as exc:
+            result = ConversionResult(self.source, ConversionStatus.ERROR, f"ERREUR : {exc}")
+        self.signals.finished.emit(result)
 
 
 class ConvertisseurQt(QMainWindow):
@@ -38,8 +61,8 @@ class ConvertisseurQt(QMainWindow):
         self.setWindowTitle("Convertisseur M4A vers MP3")
         self.setWindowIcon(QIcon(str(Path(__file__).with_name("m4a2mp3.png"))))
         self.resize(1050, 620)
-        self.executor: Optional[ThreadPoolExecutor] = None
-        self.pending: Set[Future] = set()
+        self.thread_pool = QThreadPool(self)
+        self.tasks = set()
         self.total = 0
         self.done = 0
         self.errors = 0
@@ -106,7 +129,7 @@ class ConvertisseurQt(QMainWindow):
         options_layout = QHBoxLayout()
         self.options = ConversionOptions(options_layout)
         self.overwrite_check = QCheckBox("Écraser les MP3 existants")
-        self.overwrite_check.setChecked(True)
+        self.overwrite_check.setChecked(CoreConversionOptions().overwrite)
         options_layout.addWidget(self.overwrite_check)
         self.delete_check = QCheckBox("Supprimer les M4A après conversion réussie")
         options_layout.addWidget(self.delete_check)
@@ -139,7 +162,7 @@ class ConvertisseurQt(QMainWindow):
     def _start_conversion(self) -> None:
         if self.busy:
             return
-        if shutil.which("ffmpeg") is None:
+        if not ffmpeg_available():
             QMessageBox.critical(
                 self,
                 "ffmpeg introuvable",
@@ -160,48 +183,44 @@ class ConvertisseurQt(QMainWindow):
         self.total = len(files)
         self.done = 0
         self.errors = 0
-        self.pending.clear()
+        self.tasks.clear()
         self.progress.setRange(0, self.total)
         self.progress.setValue(0)
         self.convert_button.setEnabled(False)
         self._set_source_controls_enabled(False)
         self.status_label.setText(f"Conversion de {self.total} fichier(s)…")
 
-        self.executor = ThreadPoolExecutor(max_workers=self.options.jobs)
+        self.thread_pool.setMaxThreadCount(self.options.jobs)
+        conversion_options = CoreConversionOptions(
+            quality=quality,
+            jobs=self.options.jobs,
+            delete_sources=delete_sources,
+            overwrite=overwrite,
+        )
         for path in files:
-            self.pending.add(
-                self.executor.submit(convertir, path, quality, delete_sources, overwrite)
-            )
-        QTimer.singleShot(100, self._poll_results)
+            task = ConversionTask(path, conversion_options)
+            task.signals.finished.connect(self._on_conversion_finished)
+            self.tasks.add(task)
+            self.thread_pool.start(task)
 
     def _set_source_controls_enabled(self, enabled: bool) -> None:
         self.add_files_button.setEnabled(enabled)
         self.add_folder_button.setEnabled(enabled)
         self.input_tree.setEnabled(enabled)
 
-    def _poll_results(self) -> None:
-        finished = [future for future in self.pending if future.done()]
-        for future in finished:
-            self.pending.remove(future)
-            try:
-                src, result = future.result()
-            except Exception as exc:
-                src, result = Path("Fichier inconnu"), f"ERREUR : {exc}"
-            self.done += 1
-            if result.startswith("ERREUR"):
-                self.errors += 1
-            root = self.source_tree.roots.get(str(src), src.parent)
-            self.results.add_result(src, result, root)
-            self.output_tree.scrollToBottom()
-            self.progress.setValue(self.done)
+    def _on_conversion_finished(self, result: ConversionResult) -> None:
+        self.tasks = {task for task in self.tasks if task.source != result.source}
+        self.done += 1
+        if result.status is ConversionStatus.ERROR:
+            self.errors += 1
+        root = self.source_tree.roots.get(str(result.source), result.source.parent)
+        self.results.add_result(result, root)
+        self.output_tree.scrollToBottom()
+        self.progress.setValue(self.done)
 
-        if self.pending:
-            QTimer.singleShot(100, self._poll_results)
+        if self.done < self.total:
             return
 
-        if self.executor is not None:
-            self.executor.shutdown(wait=False)
-            self.executor = None
         self.busy = False
         self.convert_button.setEnabled(True)
         self._set_source_controls_enabled(True)
@@ -223,8 +242,7 @@ class ConvertisseurQt(QMainWindow):
             if answer != yes:
                 event.ignore()
                 return
-        if self.executor is not None:
-            self.executor.shutdown(wait=False, cancel_futures=True)
+        self.thread_pool.clear()
         self.artwork.shutdown()
         event.accept()
 

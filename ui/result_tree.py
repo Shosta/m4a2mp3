@@ -2,6 +2,8 @@ import os
 from pathlib import Path
 from typing import Dict
 
+from core import ConversionResult, ConversionStatus
+
 from .artwork import ArtworkManager
 from .qt_compat import QIcon, Qt, QTreeWidget, QTreeWidgetItem
 
@@ -14,7 +16,8 @@ class ResultTree:
         self.audio_icon = audio_icon
         self.directories: Dict[str, QTreeWidgetItem] = {}
 
-    def add_result(self, source: Path, result: str, root: Path) -> None:
+    def add_result(self, result: ConversionResult, root: Path) -> None:
+        source = result.source
         destination = source.with_suffix(".mp3")
         parent = self._directory(root, root)
         current = root
@@ -24,11 +27,11 @@ class ResultTree:
 
         key = str(source)
         self.artwork.request(source)
-        if result.startswith("ERREUR"):
-            item = QTreeWidgetItem([f"ÉCHEC — {destination.name}: {result}"])
+        if result.status is ConversionStatus.ERROR:
+            item = QTreeWidgetItem([f"ÉCHEC — {destination.name}: {result.message}"])
             item.setIcon(0, self.audio_icon)
-        elif result.startswith("ignoré"):
-            item = QTreeWidgetItem([f"IGNORÉ — {destination.name}: {result}"])
+        elif result.status is ConversionStatus.SKIPPED:
+            item = QTreeWidgetItem([f"IGNORÉ — {destination.name}: {result.message}"])
             item.setIcon(0, self.artwork.icons.get(key, self.audio_icon))
         else:
             item = QTreeWidgetItem([destination.name])
@@ -40,7 +43,7 @@ class ResultTree:
         else:
             parent.addChild(item)
             parent.setExpanded(True)
-        if not result.startswith("ERREUR") and key not in self.artwork.icons:
+        if result.status is not ConversionStatus.ERROR and key not in self.artwork.icons:
             self.artwork.targets.setdefault(key, []).append(item)
 
     def _directory(self, path: Path, root: Path) -> QTreeWidgetItem:

@@ -1,5 +1,5 @@
 try:
-    from PyQt6.QtCore import QTimer, QSize, Qt, pyqtSignal
+    from PyQt6.QtCore import QObject, QRunnable, QSize, Qt, QThreadPool, pyqtSignal
     from PyQt6.QtGui import QIcon, QPixmap
     from PyQt6.QtWidgets import (
         QAbstractItemView,
@@ -23,7 +23,7 @@ try:
     )
 except ImportError:
     try:
-        from PyQt5.QtCore import QTimer, QSize, Qt, pyqtSignal
+        from PyQt5.QtCore import QObject, QRunnable, QSize, Qt, QThreadPool, pyqtSignal
         from PyQt5.QtGui import QIcon, QPixmap
         from PyQt5.QtWidgets import (
             QAbstractItemView,
