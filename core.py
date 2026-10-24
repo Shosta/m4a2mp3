@@ -15,6 +15,7 @@ MIN_JOBS = 1
 MAX_JOBS = 6
 DEFAULT_DELETE_SOURCES = False
 DEFAULT_OVERWRITE = True
+SUPPORTED_AUDIO_EXTENSIONS = frozenset({".m4a", ".wav", ".aiff", ".aif"})
 
 
 class ConversionStatus(Enum):
@@ -57,17 +58,29 @@ def ffmpeg_available() -> bool:
     return shutil.which("ffmpeg") is not None
 
 
+def is_supported_audio(path: Path) -> bool:
+    return (
+        path.is_file()
+        and path.suffix.lower() in SUPPORTED_AUDIO_EXTENSIONS
+        and not path.name.startswith("._")
+    )
+
+
 def is_m4a(path: Path) -> bool:
     return path.is_file() and path.suffix.lower() == ".m4a" and not path.name.startswith("._")
 
 
-def discover_m4a(directory: Path, on_error: Optional[Callable[[Path, OSError], None]] = None) -> list[Path]:
+def _discover_files(
+    directory: Path,
+    predicate: Callable[[Path], bool],
+    on_error: Optional[Callable[[Path, OSError], None]],
+) -> list[Path]:
     files = []
     try:
         candidates = directory.rglob("*")
         for candidate in candidates:
             try:
-                if is_m4a(candidate):
+                if predicate(candidate):
                     files.append(candidate)
             except OSError as exc:
                 if on_error is None:
@@ -80,8 +93,41 @@ def discover_m4a(directory: Path, on_error: Optional[Callable[[Path, OSError], N
     return sorted(files)
 
 
-def convert_file(source: Path, options: ConversionOptions) -> ConversionResult:
-    destination = source.with_suffix(".mp3")
+def discover_audio(
+    directory: Path,
+    on_error: Optional[Callable[[Path, OSError], None]] = None,
+) -> list[Path]:
+    return _discover_files(directory, is_supported_audio, on_error)
+
+
+def discover_m4a(
+    directory: Path,
+    on_error: Optional[Callable[[Path, OSError], None]] = None,
+) -> list[Path]:
+    return _discover_files(directory, is_m4a, on_error)
+
+
+def output_path_for(sources: list[Path]) -> dict[Path, Path]:
+    destinations = {}
+    groups = {}
+    for source in sources:
+        destination = source.with_suffix(".mp3")
+        groups.setdefault(os.path.normcase(str(destination)), (destination, []))[1].append(source)
+    for destination, colliding_sources in groups.values():
+        if len(colliding_sources) == 1:
+            destinations[colliding_sources[0]] = destination
+        else:
+            for source in colliding_sources:
+                destinations[source] = source.with_name(f"{source.name}.mp3")
+    return destinations
+
+
+def convert_file(
+    source: Path,
+    options: ConversionOptions,
+    destination: Optional[Path] = None,
+) -> ConversionResult:
+    destination = source.with_suffix(".mp3") if destination is None else destination
     if destination.exists() and not options.overwrite:
         return ConversionResult(source, ConversionStatus.SKIPPED, "ignoré (mp3 déjà présent)")
 
