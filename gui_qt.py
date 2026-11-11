@@ -103,10 +103,10 @@ class ConvertisseurQt(QMainWindow):
 
         action_bar = QHBoxLayout()
         action_bar.setSpacing(8)
-        self.add_files_button = QPushButton("Ajouter des fichiers…")
+        self.add_files_button = QPushButton(self.audio_icon, "Ajouter des fichiers…")
         self.add_files_button.clicked.connect(self._choose_files)
         action_bar.addWidget(self.add_files_button)
-        self.add_folder_button = QPushButton("Ajouter un dossier…")
+        self.add_folder_button = QPushButton(self.folder_icon, "Ajouter un dossier…")
         self.add_folder_button.clicked.connect(self._choose_folder)
         action_bar.addWidget(self.add_folder_button)
         action_bar.addSpacing(12)

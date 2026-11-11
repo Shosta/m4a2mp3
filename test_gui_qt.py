@@ -91,6 +91,16 @@ class GuiQtOutputTests(unittest.TestCase):
         self.assertIn("fichiers audio", window.status_label.text())
         self.assertIn("fichiers audio", window.input_tree.toolTip())
 
+    def test_add_buttons_show_audio_and_folder_icons(self):
+        window = gui_qt.ConvertisseurQt()
+        self.addCleanup(window.artwork.shutdown)
+        self.addCleanup(window.close)
+
+        self.assertFalse(window.add_files_button.icon().isNull())
+        self.assertFalse(window.add_folder_button.icon().isNull())
+        self.assertEqual(window.add_files_button.icon().cacheKey(), window.audio_icon.cacheKey())
+        self.assertEqual(window.add_folder_button.icon().cacheKey(), window.folder_icon.cacheKey())
+
     def test_output_folder_selector_updates_common_destination_field(self):
         window = gui_qt.ConvertisseurQt()
         self.addCleanup(window.artwork.shutdown)
