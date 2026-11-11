@@ -1,6 +1,6 @@
-from core import DEFAULT_JOBS, DEFAULT_QUALITY, MAX_JOBS, MIN_JOBS
+from core import DEFAULT_JOBS
 
-from .qt_compat import QComboBox, QHBoxLayout, QLabel, QSpinBox, QVBoxLayout
+from .qt_compat import QComboBox, QHBoxLayout, QLabel, QVBoxLayout
 
 
 class ConversionOptions:
@@ -8,21 +8,10 @@ class ConversionOptions:
         quality_layout = QVBoxLayout()
         quality_layout.addWidget(QLabel("Qualité audio"))
         self.quality_combo = QComboBox()
-        quality_levels = [
-            "0 — Qualité maximale",
-            "1 — Très élevée",
-            "2 — Élevée",
-            "3 — Bonne",
-            "4 — Bonne",
-            "5 — Standard",
-            "6 — Standard",
-            "7 — Réduite",
-            "8 — Faible",
-            "9 — Qualité minimale",
-        ]
-        for value, label in enumerate(quality_levels):
-            self.quality_combo.addItem(label, str(value))
-        self.quality_combo.setCurrentIndex(int(DEFAULT_QUALITY))
+        quality_levels = [("Haute", "0"), ("Équilibrée", "4"), ("Compacte", "8")]
+        for label, value in quality_levels:
+            self.quality_combo.addItem(label, value)
+        self.quality_combo.setCurrentIndex(0)
         self.quality_combo.setToolTip(
             "Encodage VBR : le débit varie selon le contenu audio. "
             "Une qualité supérieure produit généralement un fichier plus volumineux."
@@ -36,24 +25,10 @@ class ConversionOptions:
         layout.addLayout(quality_layout)
         layout.addSpacing(12)
 
-        self.jobs_label = QLabel("Conversions simultanées")
-        layout.addWidget(self.jobs_label)
-        self.jobs_spin = QSpinBox()
-        self.jobs_spin.setRange(MIN_JOBS, MAX_JOBS)
-        self.jobs_spin.setValue(DEFAULT_JOBS)
-        self.jobs_spin.valueChanged.connect(self._update_jobs_label)
-        layout.addWidget(self.jobs_spin)
-
-    def _update_jobs_label(self, value: int) -> None:
-        if value == 6:
-            self.jobs_label.setText("Conversions simultanées\n(maximum : 6)")
-        else:
-            self.jobs_label.setText("Conversions simultanées")
-
     @property
     def quality(self) -> str:
         return str(self.quality_combo.currentData())
 
     @property
     def jobs(self) -> int:
-        return self.jobs_spin.value()
+        return DEFAULT_JOBS

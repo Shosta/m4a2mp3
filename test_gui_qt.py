@@ -63,6 +63,34 @@ class GuiQtOutputTests(unittest.TestCase):
     def setUpClass(cls):
         cls.app = QApplication.instance() or QApplication([])
 
+    def test_conversion_options_offer_three_named_quality_levels_with_highest_default(self):
+        from ui.options import ConversionOptions
+        from ui.qt_compat import QHBoxLayout
+
+        options = ConversionOptions(QHBoxLayout())
+
+        self.assertEqual(options.quality_combo.count(), 3)
+        self.assertEqual(
+            [options.quality_combo.itemData(index) for index in range(3)],
+            ["0", "4", "8"],
+        )
+        self.assertEqual(options.quality_combo.currentData(), "0")
+        self.assertEqual(
+            [options.quality_combo.itemText(index) for index in range(3)],
+            ["Haute", "Équilibrée", "Compacte"],
+        )
+        self.assertEqual(options.jobs, 4)
+        self.assertFalse(hasattr(options, "jobs_spin"))
+
+    def test_main_window_uses_generic_source_labels(self):
+        window = gui_qt.ConvertisseurQt()
+        self.addCleanup(window.artwork.shutdown)
+        self.addCleanup(window.close)
+
+        self.assertEqual(window.delete_check.text(), "Supprimer les fichiers source après conversion réussie")
+        self.assertIn("fichiers audio", window.status_label.text())
+        self.assertIn("fichiers audio", window.input_tree.toolTip())
+
     def test_output_folder_selector_updates_common_destination_field(self):
         window = gui_qt.ConvertisseurQt()
         self.addCleanup(window.artwork.shutdown)
