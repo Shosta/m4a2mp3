@@ -1,7 +1,7 @@
 from pathlib import Path
 from typing import Dict, List, Optional, Set
 
-from core import discover_m4a, is_m4a, normalized_path_key
+from core import discover_audio, is_supported_audio, normalized_path_key
 
 from .artwork import ArtworkManager
 from .drop_tree import DropTreeWidget
@@ -50,13 +50,13 @@ class SourceTree:
             path = path.resolve()
             if path.is_dir():
                 self._add_directory(path)
-            elif is_m4a(path):
+            elif is_supported_audio(path):
                 self._add_file(path, reparent=False, root=path.parent)
         except OSError as exc:
             self.status_callback(f"Impossible d’inspecter {path}: {exc}")
 
     def _add_directory(self, path: Path, parent: Optional[QTreeWidgetItem] = None) -> Optional[QTreeWidgetItem]:
-        audio_files = discover_m4a(
+        audio_files = discover_audio(
             path,
             on_error=lambda candidate, exc: self.status_callback(
                 f"Impossible d’inspecter {candidate}: {exc}"
