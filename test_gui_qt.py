@@ -2,6 +2,7 @@ import builtins
 import os
 import runpy
 import sys
+import tempfile
 import types
 import unittest
 from pathlib import Path
@@ -127,6 +128,44 @@ class GuiQtOutputTests(unittest.TestCase):
 
         self.assertEqual(window.output_tree.topLevelItemCount(), 0)
         self.assertEqual(window.source_tree.sources, {})
+
+    def test_source_tree_adds_each_supported_audio_format_individually(self):
+        window = gui_qt.ConvertisseurQt()
+        self.addCleanup(window.artwork.shutdown)
+        self.addCleanup(window.close)
+        with tempfile.TemporaryDirectory() as directory:
+            sources = [Path(directory) / f"track{suffix}" for suffix in (".m4a", ".wav", ".aiff", ".aif")]
+            for source in sources:
+                source.touch()
+                window.source_tree.add_path(source)
+
+            self.assertEqual(set(window.source_tree.sources.values()), set(sources))
+
+    def test_source_tree_recursively_adds_supported_audio_formats(self):
+        window = gui_qt.ConvertisseurQt()
+        self.addCleanup(window.artwork.shutdown)
+        self.addCleanup(window.close)
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            sources = [root / f"track{suffix}" for suffix in (".m4a", ".wav", ".aiff", ".aif")]
+            unsupported = root / "track.flac"
+            for source in sources + [unsupported]:
+                source.touch()
+
+            window.source_tree.add_path(root)
+
+            self.assertEqual(set(window.source_tree.sources.values()), set(sources))
+
+    def test_file_dialog_filter_covers_supported_audio_formats(self):
+        window = gui_qt.ConvertisseurQt()
+        self.addCleanup(window.artwork.shutdown)
+        self.addCleanup(window.close)
+        with patch.object(gui_qt.QFileDialog, "getOpenFileNames", return_value=([], "")) as dialog:
+            window._choose_files()
+
+        file_filter = dialog.call_args.args[3]
+        for extension in (".m4a", ".wav", ".aiff", ".aif"):
+            self.assertIn(extension, file_filter)
 
     def test_output_folder_selector_updates_common_destination_field(self):
         window = gui_qt.ConvertisseurQt()

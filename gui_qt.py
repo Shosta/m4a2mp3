@@ -7,6 +7,7 @@ from core import (
     ConversionOptions as CoreConversionOptions,
     ConversionResult,
     ConversionStatus,
+    SUPPORTED_AUDIO_EXTENSIONS,
     convert_file,
     ffmpeg_available,
     normalized_path_key,
@@ -196,7 +197,7 @@ class ConvertisseurQt(QMainWindow):
             self,
             "Choisir des fichiers audio",
             "",
-            "Fichiers audio (*.m4a *.wav *.aiff *.aif);;Tous les fichiers (*)",
+            f"Fichiers audio ({' '.join(f'*{extension}' for extension in sorted(SUPPORTED_AUDIO_EXTENSIONS))});;Tous les fichiers (*)",
         )
         self.source_tree.add_paths([Path(path) for path in paths])
 

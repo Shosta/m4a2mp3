@@ -32,7 +32,7 @@ chmod +x M4A2MP3-x86_64.AppImage
 
 FFmpeg doit être installé sur le système et disponible dans le `PATH`. L’icône de l’application provient de `ui/assets/m4a-2-mp3-icon.png`.
 
-Déposez des fichiers `.m4a` ou des dossiers dans la liste de gauche ; les dossiers sont parcourus récursivement. La liste de droite affiche les résultats au fur et à mesure. Les MP3 existants sont écrasés par défaut ; les options de qualité, de parallélisme, d’écrasement et de suppression des sources sont disponibles dans la fenêtre. Le bouton « Choisir la sortie… » permet de sélectionner un dossier de destination commun : les fichiers convertis y sont rangés dans des sous-dossiers artiste/album. Sans destination sélectionnée, chaque MP3 est créé à côté de son fichier source.
+Ajoutez ou déposez des fichiers `.m4a`, `.wav`, `.aiff` ou `.aif`, ou des dossiers contenant ces formats ; les dossiers sont parcourus récursivement. La liste de droite affiche les résultats au fur et à mesure. Les MP3 existants sont écrasés par défaut ; les options de qualité, de parallélisme, d’écrasement et de suppression des sources sont disponibles dans la fenêtre. Le bouton « Choisir la sortie… » permet de sélectionner un dossier de destination commun : les fichiers convertis y sont rangés dans des sous-dossiers artiste/album. Sans destination sélectionnée, chaque MP3 est créé à côté de son fichier source.
 
 ### Ligne de commande
 
