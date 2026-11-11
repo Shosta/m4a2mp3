@@ -80,20 +80,19 @@ class ConvertisseurQt(QMainWindow):
     def _build_ui(self) -> None:
         central = QWidget(self)
         layout = QVBoxLayout(central)
-        columns = QHBoxLayout()
+        layout.setContentsMargins(18, 16, 18, 14)
+        layout.setSpacing(12)
 
-        left_column = QVBoxLayout()
-        left_column.addWidget(QLabel("Fichiers à convertir"))
-        self.input_tree = DropTreeWidget()
-        self.input_tree.setToolTip(
-            "Déposez des fichiers M4A ou des dossiers ici. "
-            "Sélectionnez un élément puis appuyez sur Suppr pour le retirer."
-        )
         self.folder_icon = QIcon.fromTheme(
             "folder", self.style().standardIcon(QStyle.StandardPixmap.SP_DirIcon)
         )
         self.audio_icon = QIcon.fromTheme(
             "audio-x-generic", self.style().standardIcon(QStyle.StandardPixmap.SP_FileIcon)
+        )
+        self.input_tree = DropTreeWidget()
+        self.input_tree.setToolTip(
+            "Déposez des fichiers audio ou des dossiers ici. "
+            "Sélectionnez un élément puis appuyez sur Suppr pour le retirer."
         )
         self.input_tree.setIconSize(QSize(16, 16))
         self.artwork = ArtworkManager(self.input_tree, self.audio_icon)
@@ -101,59 +100,75 @@ class ConvertisseurQt(QMainWindow):
         self.source_tree.status_callback = self._set_status
         self.input_tree.paths_dropped.connect(self.source_tree.add_paths)
         self.input_tree.delete_requested.connect(self.source_tree.remove_selected)
-        left_column.addWidget(self.input_tree)
 
-        controls = QVBoxLayout()
+        action_bar = QHBoxLayout()
+        action_bar.setSpacing(8)
         self.add_files_button = QPushButton("Ajouter des fichiers…")
         self.add_files_button.clicked.connect(self._choose_files)
-        controls.addWidget(self.add_files_button)
+        action_bar.addWidget(self.add_files_button)
         self.add_folder_button = QPushButton("Ajouter un dossier…")
         self.add_folder_button.clicked.connect(self._choose_folder)
-        controls.addWidget(self.add_folder_button)
-        controls.addStretch(1)
+        action_bar.addWidget(self.add_folder_button)
+        action_bar.addSpacing(12)
+        action_bar.addWidget(QLabel("Dossier de destination"))
         self.output_folder_field = QLineEdit()
-        self.output_folder_field.setPlaceholderText("Sortie commune facultative")
+        self.output_folder_field.setPlaceholderText("Même dossier que les sources")
         self.output_folder_field.setReadOnly(True)
-        controls.addWidget(self.output_folder_field)
-        self.output_folder_button = QPushButton("Choisir la sortie…")
+        self.output_folder_field.setMinimumWidth(180)
+        action_bar.addWidget(self.output_folder_field, 1)
+        self.output_folder_button = QPushButton("Parcourir…")
         self.output_folder_button.clicked.connect(self._choose_output_folder)
-        controls.addWidget(self.output_folder_button)
-        self.convert_button = QPushButton("Convertir  →")
-        self.convert_button.clicked.connect(self._start_conversion)
-        controls.addWidget(self.convert_button)
-        self.progress = QProgressBar()
-        self.progress.setValue(0)
-        controls.addWidget(self.progress)
-        controls.addStretch(1)
+        action_bar.addWidget(self.output_folder_button)
+        layout.addLayout(action_bar)
+
+        columns = QHBoxLayout()
+        columns.setSpacing(14)
+        left_column = QVBoxLayout()
+        left_column.setSpacing(6)
+        left_column.addWidget(QLabel("Entrées audio"))
+        left_column.addWidget(self.input_tree, 1)
 
         right_column = QVBoxLayout()
-        right_column.addWidget(QLabel("Fichiers convertis"))
+        right_column.setSpacing(6)
+        right_column.addWidget(QLabel("Résultats"))
         self.output_tree = QTreeWidget()
         self.output_tree.setHeaderHidden(True)
         self.output_tree.setIconSize(QSize(16, 16))
         self.results = ResultTree(
             self.output_tree, self.artwork, self.folder_icon, self.audio_icon
         )
-        right_column.addWidget(self.output_tree)
-
+        right_column.addWidget(self.output_tree, 1)
         columns.addLayout(left_column, 1)
-        columns.addLayout(controls)
         columns.addLayout(right_column, 1)
         layout.addLayout(columns, 1)
 
-        options_layout = QHBoxLayout()
-        self.options = ConversionOptions(options_layout)
-        self.overwrite_check = QCheckBox("Écraser les MP3 existants")
+        footer = QHBoxLayout()
+        footer.setSpacing(14)
+        self.options = ConversionOptions(footer)
+        footer.addSpacing(8)
+        self.overwrite_check = QCheckBox("Écraser les fichiers existants")
         self.overwrite_check.setChecked(CoreConversionOptions().overwrite)
-        options_layout.addWidget(self.overwrite_check)
-        self.delete_check = QCheckBox("Supprimer les M4A après conversion réussie")
-        options_layout.addWidget(self.delete_check)
-        layout.addLayout(options_layout)
+        footer.addWidget(self.overwrite_check)
+        self.delete_check = QCheckBox("Supprimer les fichiers source après conversion réussie")
+        footer.addWidget(self.delete_check)
+        footer.addStretch(1)
+        layout.addLayout(footer)
 
+        bottom_bar = QHBoxLayout()
         self.status_label = QLabel(
-            "Déposez des fichiers M4A ou des dossiers dans la liste de gauche."
+            "Déposez des fichiers audio ou des dossiers dans la liste des entrées."
         )
-        layout.addWidget(self.status_label)
+        bottom_bar.addWidget(self.status_label, 1)
+        self.progress = QProgressBar()
+        self.progress.setValue(0)
+        self.progress.setMaximumWidth(220)
+        bottom_bar.addWidget(self.progress)
+        self.convert_button = QPushButton("Convertir")
+        self.convert_button.setDefault(True)
+        self.convert_button.clicked.connect(self._start_conversion)
+        bottom_bar.addWidget(self.convert_button)
+        layout.addLayout(bottom_bar)
+
         self.setCentralWidget(central)
         self._source_controls_enabled = True
 
@@ -163,14 +178,14 @@ class ConvertisseurQt(QMainWindow):
     def _choose_files(self) -> None:
         paths, _ = QFileDialog.getOpenFileNames(
             self,
-            "Choisir des fichiers M4A",
+            "Choisir des fichiers audio",
             "",
-            "Fichiers M4A (*.m4a);;Tous les fichiers (*)",
+            "Fichiers audio (*.m4a *.wav *.aiff *.aif);;Tous les fichiers (*)",
         )
         self.source_tree.add_paths([Path(path) for path in paths])
 
     def _choose_folder(self) -> None:
-        path = QFileDialog.getExistingDirectory(self, "Choisir un dossier")
+        path = QFileDialog.getExistingDirectory(self, "Choisir un dossier audio")
         if path:
             self.source_tree.add_path(Path(path))
 
