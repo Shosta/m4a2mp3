@@ -2,13 +2,16 @@
 
 import sys
 from pathlib import Path
+from typing import Optional
 from core import (
     ConversionOptions as CoreConversionOptions,
     ConversionResult,
     ConversionStatus,
     convert_file,
     ffmpeg_available,
+    normalized_path_key,
 )
+
 from ui.qt_compat import QObject, QRunnable, QThreadPool, pyqtSignal
 
 from ui.artwork import ArtworkManager
@@ -21,6 +24,7 @@ from ui.qt_compat import (
     QHBoxLayout,
     QIcon,
     QLabel,
+    QLineEdit,
     QMainWindow,
     QMessageBox,
     QProgressBar,
@@ -31,6 +35,7 @@ from ui.qt_compat import (
     QVBoxLayout,
     QWidget,
 )
+from ui.output_plan import prepare_output_plan, prepare_source_plan
 from ui.result_tree import ResultTree
 from ui.source_tree import SourceTree
 
@@ -40,16 +45,19 @@ class ConversionSignals(QObject):
 
 
 class ConversionTask(QRunnable):
-    def __init__(self, source: Path, options: CoreConversionOptions) -> None:
+    def __init__(
+        self, source: Path, options: CoreConversionOptions, destination: Optional[Path] = None
+    ) -> None:
         super().__init__()
         self.source = source
         self.options = options
+        self.destination = destination
         self.signals = ConversionSignals()
         self.setAutoDelete(False)
 
     def run(self) -> None:
         try:
-            result = convert_file(self.source, self.options)
+            result = convert_file(self.source, self.options, destination=self.destination)
         except Exception as exc:
             result = ConversionResult(self.source, ConversionStatus.ERROR, f"ERREUR : {exc}")
         self.signals.finished.emit(result)
@@ -103,6 +111,13 @@ class ConvertisseurQt(QMainWindow):
         self.add_folder_button.clicked.connect(self._choose_folder)
         controls.addWidget(self.add_folder_button)
         controls.addStretch(1)
+        self.output_folder_field = QLineEdit()
+        self.output_folder_field.setPlaceholderText("Sortie commune facultative")
+        self.output_folder_field.setReadOnly(True)
+        controls.addWidget(self.output_folder_field)
+        self.output_folder_button = QPushButton("Choisir la sortie…")
+        self.output_folder_button.clicked.connect(self._choose_output_folder)
+        controls.addWidget(self.output_folder_button)
         self.convert_button = QPushButton("Convertir  →")
         self.convert_button.clicked.connect(self._start_conversion)
         controls.addWidget(self.convert_button)
@@ -159,6 +174,11 @@ class ConvertisseurQt(QMainWindow):
         if path:
             self.source_tree.add_path(Path(path))
 
+    def _choose_output_folder(self) -> None:
+        path = QFileDialog.getExistingDirectory(self, "Choisir le dossier de sortie")
+        if path:
+            self.output_folder_field.setText(path)
+
     def _start_conversion(self) -> None:
         if self.busy:
             return
@@ -176,6 +196,12 @@ class ConvertisseurQt(QMainWindow):
             return
 
         files = list(self.source_tree.sources.values())
+        output_text = self.output_folder_field.text().strip()
+        output_root = Path(output_text).resolve() if output_text else None
+        plan = prepare_output_plan(files, output_root) if output_root else prepare_source_plan(files)
+        self._output_root = output_root
+        self._destinations = plan.destinations
+        self.source_tree.set_destination_plan(self._destinations)
         quality = self.options.quality
         overwrite = self.overwrite_check.isChecked()
         delete_sources = self.delete_check.isChecked()
@@ -197,15 +223,33 @@ class ConvertisseurQt(QMainWindow):
             delete_sources=delete_sources,
             overwrite=overwrite,
         )
+        for path, message in plan.failures.items():
+            self.errors += 1
+            self.done += 1
+            destination = plan.failure_destinations.get(path, path.with_suffix(".mp3"))
+            result = ConversionResult(path, ConversionStatus.ERROR, message)
+            root = self.source_tree.roots.get(normalized_path_key(path), path.parent)
+            failure_root = output_root if output_root and path in plan.failure_destinations else None
+            self.results.add_result(result, root, destination, failure_root)
+
         for path in files:
-            task = ConversionTask(path, conversion_options)
+            destination = plan.destinations.get(path)
+            if destination is None:
+                continue
+            task = ConversionTask(path, conversion_options, destination)
             task.signals.finished.connect(self._on_conversion_finished)
             self.tasks.add(task)
             self.thread_pool.start(task)
 
+        self.progress.setValue(self.done)
+        self.output_tree.scrollToBottom()
+        if self.done == self.total:
+            self._finish_conversion()
+
     def _set_source_controls_enabled(self, enabled: bool) -> None:
         self.add_files_button.setEnabled(enabled)
         self.add_folder_button.setEnabled(enabled)
+        self.output_folder_button.setEnabled(enabled)
         self.input_tree.setEnabled(enabled)
 
     def _on_conversion_finished(self, result: ConversionResult) -> None:
@@ -213,14 +257,17 @@ class ConvertisseurQt(QMainWindow):
         self.done += 1
         if result.status is ConversionStatus.ERROR:
             self.errors += 1
-        root = self.source_tree.roots.get(str(result.source), result.source.parent)
-        self.results.add_result(result, root)
+        root = self.source_tree.roots.get(normalized_path_key(result.source), result.source.parent)
+        destination = self._destinations.get(result.source, result.source.with_suffix(".mp3"))
+        output_root = self._output_root
+        self.results.add_result(result, root, destination, output_root)
         self.output_tree.scrollToBottom()
         self.progress.setValue(self.done)
 
-        if self.done < self.total:
-            return
+        if self.done >= self.total:
+            self._finish_conversion()
 
+    def _finish_conversion(self) -> None:
         self.busy = False
         self.convert_button.setEnabled(True)
         self._set_source_controls_enabled(True)
