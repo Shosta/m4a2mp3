@@ -5,7 +5,19 @@ from typing import Dict, Optional
 from core import ConversionResult, ConversionStatus, normalized_path_key
 
 from .artwork import ArtworkManager
-from .qt_compat import QIcon, Qt, QTreeWidget, QTreeWidgetItem
+from .qt_compat import QIcon, Qt, QTreeWidget, QTreeWidgetItem, pyqtSignal
+
+
+class ResultTreeWidget(QTreeWidget):
+    delete_requested = pyqtSignal()
+
+    def keyPressEvent(self, event) -> None:
+        delete_key = Qt.Key.Key_Delete if hasattr(Qt, "Key") else Qt.Key_Delete
+        if event.key() == delete_key:
+            self.delete_requested.emit()
+            event.accept()
+            return
+        super().keyPressEvent(event)
 
 
 class ResultTree:
@@ -15,6 +27,12 @@ class ResultTree:
         self.folder_icon = folder_icon
         self.audio_icon = audio_icon
         self.directories: Dict[str, QTreeWidgetItem] = {}
+
+    def clear(self) -> None:
+        self.tree.clear()
+        self.directories.clear()
+        self.artwork.icons.clear()
+        self.artwork.targets.clear()
 
     def add_result(
         self,

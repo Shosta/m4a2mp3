@@ -31,12 +31,11 @@ from ui.qt_compat import (
     QPushButton,
     QSize,
     QStyle,
-    QTreeWidget,
     QVBoxLayout,
     QWidget,
 )
 from ui.output_plan import prepare_output_plan, prepare_source_plan
-from ui.result_tree import ResultTree
+from ui.result_tree import ResultTree, ResultTreeWidget
 from ui.source_tree import SourceTree
 
 
@@ -125,13 +124,27 @@ class ConvertisseurQt(QMainWindow):
         columns.setSpacing(14)
         left_column = QVBoxLayout()
         left_column.setSpacing(6)
-        left_column.addWidget(QLabel("Entrées audio"))
+        input_header = QLabel("Entrées audio")
+        input_header.setFixedHeight(28)
+        left_column.addWidget(input_header)
         left_column.addWidget(self.input_tree, 1)
 
         right_column = QVBoxLayout()
         right_column.setSpacing(6)
-        right_column.addWidget(QLabel("Résultats"))
-        self.output_tree = QTreeWidget()
+        results_header = QHBoxLayout()
+        results_header.setContentsMargins(0, 0, 0, 0)
+        results_header_widget = QWidget()
+        results_header_widget.setFixedHeight(28)
+        results_header_widget.setLayout(results_header)
+        results_header.addWidget(QLabel("Résultats"))
+        results_header.addStretch(1)
+        trash_icon = self.style().standardIcon(QStyle.StandardPixmap.SP_TrashIcon)
+        self.clear_results_button = QPushButton(trash_icon, "Vider les résultats")
+        self.clear_results_button.clicked.connect(self._clear_results)
+        results_header.addWidget(self.clear_results_button)
+        right_column.addWidget(results_header_widget)
+        self.output_tree = ResultTreeWidget()
+        self.output_tree.delete_requested.connect(self._clear_results)
         self.output_tree.setHeaderHidden(True)
         self.output_tree.setIconSize(QSize(16, 16))
         self.results = ResultTree(
@@ -174,6 +187,9 @@ class ConvertisseurQt(QMainWindow):
 
     def _set_status(self, message: str) -> None:
         self.status_label.setText(message)
+
+    def _clear_results(self) -> None:
+        self.results.clear()
 
     def _choose_files(self) -> None:
         paths, _ = QFileDialog.getOpenFileNames(
