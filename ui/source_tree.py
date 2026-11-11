@@ -1,8 +1,7 @@
-import os
 from pathlib import Path
 from typing import Dict, List, Optional, Set
 
-from core import discover_m4a, is_m4a
+from core import discover_m4a, is_m4a, normalized_path_key
 
 from .artwork import ArtworkManager
 from .drop_tree import DropTreeWidget
@@ -15,11 +14,32 @@ class SourceTree:
         self.artwork = artwork
         self.sources: Dict[str, Path] = {}
         self.roots: Dict[str, Path] = {}
-        self.destinations: Dict[str, Path] = {}
+        self.destinations: Dict[str, Set[str]] = {}
+        self.source_destinations: Dict[str, str] = {}
+        self.planned_destinations: Dict[str, str] = {}
         self.items: Dict[str, QTreeWidgetItem] = {}
         self.status_callback = lambda message: None
         self.folder_icon = QIcon.fromTheme("folder", tree.style().standardIcon(QStyle.StandardPixmap.SP_DirIcon))
         self.audio_icon = QIcon.fromTheme("audio-x-generic", tree.style().standardIcon(QStyle.StandardPixmap.SP_FileIcon))
+
+    def set_destination_plan(self, destinations: Dict[Path, Path]) -> None:
+        self.planned_destinations = {
+            normalized_path_key(source): normalized_path_key(destination)
+            for source, destination in destinations.items()
+        }
+        for source_key, old_destination_key in self.source_destinations.items():
+            sources = self.destinations.get(old_destination_key, set())
+            sources.discard(source_key)
+            if not sources:
+                self.destinations.pop(old_destination_key, None)
+        self.source_destinations.clear()
+        for source_key, destination_key in self.planned_destinations.items():
+            self.destinations.setdefault(destination_key, set()).add(source_key)
+        self.source_destinations = {
+            source: destination
+            for destination, sources in self.destinations.items()
+            for source in sources
+        }
 
     def add_paths(self, paths: List[Path]) -> None:
         for path in paths:
@@ -59,7 +79,7 @@ class SourceTree:
         return item
 
     def _ensure_directory(self, path: Path, parent: Optional[QTreeWidgetItem]) -> QTreeWidgetItem:
-        key = os.path.normcase(str(path))
+        key = normalized_path_key(path)
         item = self.items.get(key)
         if item is None:
             item = QTreeWidgetItem([path.name or str(path)])
@@ -78,18 +98,16 @@ class SourceTree:
         root: Optional[Path] = None,
     ) -> None:
         path = path.resolve()
-        key = os.path.normcase(str(path))
-        destination_key = os.path.normcase(str(path.with_suffix(".mp3")))
-        previous = self.destinations.get(destination_key)
-        if previous is not None and previous != path:
-            self.status_callback(f"Collision ignorée : {previous.name} et {path.name} produisent le même MP3.")
-            return
-
+        key = normalized_path_key(path)
+        destination_key = self.planned_destinations.get(
+            key, normalized_path_key(path.with_suffix(".mp3"))
+        )
         is_new = key not in self.sources
         if is_new:
             self.sources[key] = path
             self.roots[key] = root or path.parent
-            self.destinations[destination_key] = path
+            self.destinations.setdefault(destination_key, set()).add(key)
+            self.source_destinations[key] = destination_key
             item = QTreeWidgetItem([path.name])
             item.setIcon(0, self.audio_icon)
             item.setToolTip(0, str(path))
@@ -145,11 +163,21 @@ class SourceTree:
             if not value:
                 continue
             path = Path(value)
-            key = os.path.normcase(str(path))
+            key = normalized_path_key(path)
             if key in self.sources:
                 self.sources.pop(key, None)
                 self.roots.pop(key, None)
-                self.destinations.pop(os.path.normcase(str(path.with_suffix(".mp3"))), None)
+                destination_key = self.source_destinations.pop(
+                    key,
+                    self.planned_destinations.get(
+                        key, normalized_path_key(path.with_suffix(".mp3"))
+                    ),
+                )
+                self.planned_destinations.pop(key, None)
+                sources = self.destinations.get(destination_key, set())
+                sources.discard(key)
+                if not sources:
+                    self.destinations.pop(destination_key, None)
                 self.artwork.clear(path)
             self.items.pop(key, None)
 
@@ -165,7 +193,7 @@ class SourceTree:
             grandparent = parent.parent()
             value = parent.data(0, self._user_role())
             if value:
-                self.items.pop(os.path.normcase(str(Path(value))), None)
+                self.items.pop(normalized_path_key(Path(value)), None)
             if grandparent is None:
                 index = self.tree.indexOfTopLevelItem(parent)
                 if index >= 0:

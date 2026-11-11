@@ -1,4 +1,6 @@
+import json
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -16,6 +18,17 @@ MAX_JOBS = 6
 DEFAULT_DELETE_SOURCES = False
 DEFAULT_OVERWRITE = True
 SUPPORTED_AUDIO_EXTENSIONS = frozenset({".m4a", ".wav", ".aiff", ".aif"})
+WINDOWS_RESERVED_DEVICE_NAMES = frozenset(
+    {"CON", "PRN", "AUX", "NUL"}
+    | {f"COM{number}" for number in range(1, 10)}
+    | {f"LPT{number}" for number in range(1, 10)}
+    | {f"COM{number}" for number in "¹²³"}
+    | {f"LPT{number}" for number in "¹²³"}
+)
+
+
+def normalized_path_key(path: Path | str) -> str:
+    return os.path.normpath(str(path)).casefold()
 
 
 class ConversionStatus(Enum):
@@ -107,12 +120,84 @@ def discover_m4a(
     return _discover_files(directory, is_m4a, on_error)
 
 
+def _tag_value(tags: object, name: str) -> str:
+    if not isinstance(tags, dict):
+        return ""
+    for key, value in tags.items():
+        if isinstance(key, str) and key.casefold() == name.casefold():
+            return value.strip() if isinstance(value, str) else ""
+    return ""
+
+
+def read_audio_tags(source: Path) -> tuple[str, str]:
+    try:
+        result = subprocess.run(
+            [
+                "ffprobe", "-v", "error", "-show_format", "-show_streams",
+                "-of", "json", str(source),
+            ],
+            capture_output=True,
+            text=True,
+            env=ffmpeg_environment(),
+            timeout=30,
+        )
+    except subprocess.TimeoutExpired as exc:
+        raise ValueError("ffprobe timed out") from exc
+    if result.returncode != 0:
+        raise ValueError(f"ffprobe failed: {result.stderr.strip()}")
+    try:
+        probe_data = json.loads(result.stdout)
+    except (TypeError, json.JSONDecodeError) as exc:
+        raise ValueError("ffprobe returned invalid JSON") from exc
+    if not isinstance(probe_data, dict):
+        raise ValueError("ffprobe returned invalid data")
+
+    format_data = probe_data.get("format")
+    format_tags = format_data.get("tags") if isinstance(format_data, dict) else None
+    streams = probe_data.get("streams", [])
+    if not isinstance(streams, list):
+        raise ValueError("ffprobe returned invalid streams")
+    audio_tags = next(
+        (
+            stream.get("tags")
+            for stream in streams
+            if isinstance(stream, dict) and stream.get("codec_type") == "audio"
+        ),
+        None,
+    )
+    artist = _tag_value(format_tags, "artist") or _tag_value(audio_tags, "artist") or "Artiste inconnu"
+    album = _tag_value(format_tags, "album") or _tag_value(audio_tags, "album") or "Album inconnu"
+    return artist, album
+
+
+def _safe_path_component(value: str, fallback: str) -> str:
+    component = value.strip()
+    component = re.sub(r'[<>:"/\\|?*\x00-\x1f]', "_", component)
+    component = component.strip(" .")
+    if component in {"", ".", ".."}:
+        return fallback
+    if component.split(".", 1)[0].rstrip(" .").upper() in WINDOWS_RESERVED_DEVICE_NAMES:
+        component = f"_{component}"
+    return component
+
+
+def output_path_from_tags(source: Path, output_root: Path, artist: str, album: str) -> Path:
+    root = output_root.resolve()
+    artist_component = _safe_path_component(artist, "Artiste inconnu")
+    album_component = _safe_path_component(album, "Album inconnu")
+    destination = root / artist_component / album_component / source.with_suffix(".mp3").name
+    resolved_destination = destination.resolve()
+    if not resolved_destination.is_relative_to(root):
+        raise ValueError("Generated destination escapes output root")
+    return destination
+
+
 def output_path_for(sources: list[Path]) -> dict[Path, Path]:
     destinations = {}
     groups = {}
     for source in sources:
         destination = source.with_suffix(".mp3")
-        groups.setdefault(os.path.normcase(str(destination)), (destination, []))[1].append(source)
+        groups.setdefault(normalized_path_key(destination), (destination, []))[1].append(source)
     for destination, colliding_sources in groups.values():
         if len(colliding_sources) == 1:
             destinations[colliding_sources[0]] = destination
@@ -133,7 +218,8 @@ def convert_file(
 
     temporary_path = None
     try:
-        with tempfile.NamedTemporaryFile(dir=source.parent, suffix=".mp3", delete=False) as temporary_file:
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        with tempfile.NamedTemporaryFile(dir=destination.parent, suffix=".mp3", delete=False) as temporary_file:
             temporary_path = Path(temporary_file.name)
 
         command = [
