@@ -1,12 +1,13 @@
 import os
 import tempfile
+import types
 import unittest
 from pathlib import Path
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
-from ui.qt_compat import QApplication, QIcon, QTreeWidget
-from ui.result_tree import ResultTree
+from ui.qt_compat import QApplication, QIcon, Qt
+from ui.result_tree import ResultTree, ResultTreeWidget
 
 import core
 
@@ -28,8 +29,35 @@ class ResultTreeOutputTests(unittest.TestCase):
         self.temporary_directory = tempfile.TemporaryDirectory()
         self.addCleanup(self.temporary_directory.cleanup)
         self.root = Path(self.temporary_directory.name)
-        self.tree = QTreeWidget()
+        self.tree = ResultTreeWidget()
         self.result_tree = ResultTree(self.tree, Artwork(), QIcon(), QIcon())
+
+    def test_delete_key_emits_remove_request(self):
+        widget = ResultTreeWidget()
+        requested = []
+        widget.delete_requested.connect(lambda: requested.append(True))
+        event = types.SimpleNamespace(key=lambda: Qt.Key.Key_Delete if hasattr(Qt, "Key") else Qt.Key_Delete,
+                                      accept=lambda: None)
+
+        widget.keyPressEvent(event)
+
+        self.assertEqual(requested, [True])
+
+    def test_clearing_results_removes_tree_and_cached_artwork_targets(self):
+        source = self.root / "incoming" / "track.m4a"
+        destination = self.root / "Artist" / "Album" / "track.mp3"
+        artwork = Artwork()
+        self.result_tree = ResultTree(self.tree, artwork, QIcon(), QIcon())
+        result = core.ConversionResult(source, core.ConversionStatus.SUCCESS, "converti")
+        self.result_tree.add_result(result, source.parent, destination, self.root)
+        artwork.icons[str(source)] = QIcon()
+        artwork.targets[str(source)] = [object()]
+        self.result_tree.clear()
+
+        self.assertEqual(self.tree.topLevelItemCount(), 0)
+        self.assertEqual(self.result_tree.directories, {})
+        self.assertEqual(artwork.icons, {})
+        self.assertEqual(artwork.targets, {})
 
     def test_result_is_nested_under_actual_artist_album_destination(self):
         source = self.root / "incoming" / "track.m4a"
