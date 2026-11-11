@@ -101,6 +101,18 @@ class GuiQtOutputTests(unittest.TestCase):
         self.assertEqual(window.add_files_button.icon().cacheKey(), window.audio_icon.cacheKey())
         self.assertEqual(window.add_folder_button.icon().cacheKey(), window.folder_icon.cacheKey())
 
+    def test_result_panels_are_aligned_and_clear_button_has_trash_icon(self):
+        window = gui_qt.ConvertisseurQt()
+        self.addCleanup(window.artwork.shutdown)
+        self.addCleanup(window.close)
+        window.show()
+        self.app.processEvents()
+
+        input_top = window.input_tree.mapTo(window, window.input_tree.rect().topLeft()).y()
+        output_top = window.output_tree.mapTo(window, window.output_tree.rect().topLeft()).y()
+        self.assertEqual(input_top, output_top)
+        self.assertFalse(window.clear_results_button.icon().isNull())
+
     def test_clear_results_button_clears_only_the_results_view(self):
         window = gui_qt.ConvertisseurQt()
         self.addCleanup(window.artwork.shutdown)
