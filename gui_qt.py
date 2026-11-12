@@ -17,7 +17,7 @@ from ui.qt_compat import QObject, QRunnable, QThreadPool, pyqtSignal
 
 from ui.artwork import ArtworkManager
 from ui.drop_tree import DropTreeWidget
-from ui.options import ConversionOptions
+from ui.options import ConversionOptions, PreferencesDialog
 from ui.qt_compat import (
     QApplication,
     QCheckBox,
@@ -32,6 +32,7 @@ from ui.qt_compat import (
     QPushButton,
     QSize,
     QStyle,
+    QSettings,
     QVBoxLayout,
     QWidget,
 )
@@ -69,6 +70,7 @@ class ConvertisseurQt(QMainWindow):
         self.setWindowTitle("Convertisseur M4A vers MP3")
         self.setWindowIcon(QIcon(str(Path(__file__).with_name("m4a2mp3.png"))))
         self.resize(1050, 620)
+        self.settings = QSettings("Shosta", "m4a2mp3")
         self.thread_pool = QThreadPool(self)
         self.tasks = set()
         self.total = 0
@@ -119,6 +121,15 @@ class ConvertisseurQt(QMainWindow):
         self.output_folder_button = QPushButton("Parcourir…")
         self.output_folder_button.clicked.connect(self._choose_output_folder)
         action_bar.addWidget(self.output_folder_button)
+        preferences_icon = QIcon.fromTheme(
+            "preferences-system",
+            self.style().standardIcon(QStyle.StandardPixmap.SP_FileDialogDetailedView),
+        )
+        self.preferences_button = QPushButton(preferences_icon, "")
+        self.preferences_button.setToolTip("Préférences")
+        self.preferences_button.setAccessibleName("Préférences")
+        self.preferences_button.clicked.connect(self._open_preferences)
+        action_bar.addWidget(self.preferences_button)
         layout.addLayout(action_bar)
 
         columns = QHBoxLayout()
@@ -192,7 +203,44 @@ class ConvertisseurQt(QMainWindow):
         layout.addLayout(bottom_bar)
 
         self.setCentralWidget(central)
+        self._load_preferences()
         self._source_controls_enabled = True
+
+    def _load_preferences(self) -> None:
+        self.output_folder_field.setText(str(self.settings.value("output_folder", "")))
+        quality = str(self.settings.value("quality", "0"))
+        quality_index = self.options.quality_combo.findData(quality)
+        self.options.quality_combo.setCurrentIndex(quality_index if quality_index >= 0 else 0)
+        self.overwrite_check.setChecked(
+            self.settings.value("overwrite", CoreConversionOptions().overwrite, type=bool)
+        )
+        self.delete_check.setChecked(self.settings.value("delete_sources", False, type=bool))
+
+    def _open_preferences(self) -> None:
+        self.preferences_dialog = PreferencesDialog(
+            self.output_folder_field.text(),
+            self.options.quality,
+            self.overwrite_check.isChecked(),
+            self.delete_check.isChecked(),
+            self,
+        )
+        dialog_exec = (
+            self.preferences_dialog.exec
+            if hasattr(self.preferences_dialog, "exec")
+            else self.preferences_dialog.exec_
+        )
+        if dialog_exec():
+            self.output_folder_field.setText(self.preferences_dialog.output_folder_field.text())
+            self.options.quality_combo.setCurrentIndex(
+                self.preferences_dialog.quality_combo.currentIndex()
+            )
+            self.overwrite_check.setChecked(self.preferences_dialog.overwrite_check.isChecked())
+            self.delete_check.setChecked(self.preferences_dialog.delete_check.isChecked())
+            self.settings.setValue("output_folder", self.output_folder_field.text())
+            self.settings.setValue("quality", self.options.quality)
+            self.settings.setValue("overwrite", self.overwrite_check.isChecked())
+            self.settings.setValue("delete_sources", self.delete_check.isChecked())
+            self.settings.sync()
 
     def _set_status(self, message: str) -> None:
         self.status_label.setText(message)
@@ -222,6 +270,8 @@ class ConvertisseurQt(QMainWindow):
         path = QFileDialog.getExistingDirectory(self, "Choisir le dossier de sortie")
         if path:
             self.output_folder_field.setText(path)
+            self.settings.setValue("output_folder", path)
+            self.settings.sync()
 
     def _start_conversion(self) -> None:
         if self.busy:

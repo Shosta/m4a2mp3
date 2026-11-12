@@ -1,5 +1,5 @@
 try:
-    from PyQt6.QtCore import QObject, QRunnable, QSize, Qt, QThreadPool, pyqtSignal
+    from PyQt6.QtCore import QObject, QRunnable, QSize, Qt, QThreadPool, QSettings, pyqtSignal
     from PyQt6.QtGui import QIcon, QPixmap
     from PyQt6.QtWidgets import (
         QAbstractItemView,
@@ -16,6 +16,9 @@ try:
         QProgressBar,
         QPushButton,
         QStyle,
+        QDialog,
+        QDialogButtonBox,
+        QFormLayout,
         QSpinBox,
         QTreeWidget,
         QTreeWidgetItem,
@@ -24,7 +27,7 @@ try:
     )
 except ImportError:
     try:
-        from PyQt5.QtCore import QObject, QRunnable, QSize, Qt, QThreadPool, pyqtSignal
+        from PyQt5.QtCore import QObject, QRunnable, QSize, Qt, QThreadPool, QSettings, pyqtSignal
         from PyQt5.QtGui import QIcon, QPixmap
         from PyQt5.QtWidgets import (
             QAbstractItemView,
@@ -40,6 +43,9 @@ except ImportError:
             QMessageBox,
             QProgressBar,
             QPushButton,
+            QDialog,
+            QDialogButtonBox,
+            QFormLayout,
             QSpinBox,
             QStyle,
             QTreeWidget,
