@@ -17,6 +17,7 @@ from ui.qt_compat import QObject, QRunnable, QThreadPool, pyqtSignal
 
 from ui.artwork import ArtworkManager
 from ui.drop_tree import DropTreeWidget
+from ui.i18n import LANGUAGES, translate
 from ui.options import ConversionOptions, PreferencesDialog
 from ui.qt_compat import (
     QApplication,
@@ -67,10 +68,12 @@ class ConversionTask(QRunnable):
 class ConvertisseurQt(QMainWindow):
     def __init__(self) -> None:
         super().__init__()
-        self.setWindowTitle("Convertisseur M4A vers MP3")
+        self.settings = QSettings("Shosta", "m4a2mp3")
+        saved_language = str(self.settings.value("language", "fr"))
+        self.language = saved_language if saved_language in {item["code"] for item in LANGUAGES} else "fr"
+        self.setWindowTitle(translate(self.language, "M4A to MP3 Converter"))
         self.setWindowIcon(QIcon(str(Path(__file__).with_name("m4a2mp3.png"))))
         self.resize(1050, 620)
-        self.settings = QSettings("Shosta", "m4a2mp3")
         self.thread_pool = QThreadPool(self)
         self.tasks = set()
         self.total = 0
@@ -93,32 +96,42 @@ class ConvertisseurQt(QMainWindow):
         )
         self.input_tree = DropTreeWidget()
         self.input_tree.setToolTip(
-            "Déposez des fichiers audio ou des dossiers ici. "
-            "Sélectionnez un élément puis appuyez sur Suppr pour le retirer."
+            translate(
+                self.language,
+                "Drop audio files or folders here. Select an item and press Delete to remove it.",
+            )
         )
         self.input_tree.setIconSize(QSize(16, 16))
         self.artwork = ArtworkManager(self.input_tree, self.audio_icon)
         self.source_tree = SourceTree(self.input_tree, self.artwork)
         self.source_tree.status_callback = self._set_status
+        self.source_tree.language = self.language
         self.input_tree.paths_dropped.connect(self.source_tree.add_paths)
         self.input_tree.delete_requested.connect(self.source_tree.remove_selected)
 
         action_bar = QHBoxLayout()
         action_bar.setSpacing(8)
-        self.add_files_button = QPushButton(self.audio_icon, "Ajouter des fichiers…")
+        self.add_files_button = QPushButton(
+            self.audio_icon, translate(self.language, "Add audio files…")
+        )
         self.add_files_button.clicked.connect(self._choose_files)
         action_bar.addWidget(self.add_files_button)
-        self.add_folder_button = QPushButton(self.folder_icon, "Ajouter un dossier…")
+        self.add_folder_button = QPushButton(
+            self.folder_icon, translate(self.language, "Add a folder…")
+        )
         self.add_folder_button.clicked.connect(self._choose_folder)
         action_bar.addWidget(self.add_folder_button)
         action_bar.addSpacing(12)
-        action_bar.addWidget(QLabel("Dossier de destination"))
+        self.output_folder_label = QLabel(translate(self.language, "Output folder"))
+        action_bar.addWidget(self.output_folder_label)
         self.output_folder_field = QLineEdit()
-        self.output_folder_field.setPlaceholderText("Même dossier que les sources")
+        self.output_folder_field.setPlaceholderText(
+            translate(self.language, "Same folder as sources")
+        )
         self.output_folder_field.setReadOnly(True)
         self.output_folder_field.setMinimumWidth(180)
         action_bar.addWidget(self.output_folder_field, 1)
-        self.output_folder_button = QPushButton("Parcourir…")
+        self.output_folder_button = QPushButton(translate(self.language, "Browse…"))
         self.output_folder_button.clicked.connect(self._choose_output_folder)
         action_bar.addWidget(self.output_folder_button)
         preferences_icon = QIcon.fromTheme(
@@ -126,8 +139,8 @@ class ConvertisseurQt(QMainWindow):
             self.style().standardIcon(QStyle.StandardPixmap.SP_FileDialogDetailedView),
         )
         self.preferences_button = QPushButton(preferences_icon, "")
-        self.preferences_button.setToolTip("Préférences")
-        self.preferences_button.setAccessibleName("Préférences")
+        self.preferences_button.setToolTip(translate(self.language, "Preferences"))
+        self.preferences_button.setAccessibleName(translate(self.language, "Preferences"))
         self.preferences_button.clicked.connect(self._open_preferences)
         action_bar.addWidget(self.preferences_button)
         layout.addLayout(action_bar)
@@ -141,10 +154,13 @@ class ConvertisseurQt(QMainWindow):
         input_header_widget = QWidget()
         input_header_widget.setFixedHeight(28)
         input_header_widget.setLayout(input_header)
-        input_header.addWidget(QLabel("Entrées audio"))
+        self.input_header_label = QLabel(translate(self.language, "Audio inputs"))
+        input_header.addWidget(self.input_header_label)
         input_header.addStretch(1)
         trash_icon = self.style().standardIcon(QStyle.StandardPixmap.SP_TrashIcon)
-        self.clear_sources_button = QPushButton(trash_icon, "Vider les entrées")
+        self.clear_sources_button = QPushButton(
+            trash_icon, translate(self.language, "Clear inputs")
+        )
         self.clear_sources_button.clicked.connect(self._clear_sources)
         input_header.addWidget(self.clear_sources_button)
         left_column.addWidget(input_header_widget)
@@ -157,9 +173,12 @@ class ConvertisseurQt(QMainWindow):
         results_header_widget = QWidget()
         results_header_widget.setFixedHeight(28)
         results_header_widget.setLayout(results_header)
-        results_header.addWidget(QLabel("Résultats"))
+        self.results_header_label = QLabel(translate(self.language, "Results"))
+        results_header.addWidget(self.results_header_label)
         results_header.addStretch(1)
-        self.clear_results_button = QPushButton(trash_icon, "Vider les résultats")
+        self.clear_results_button = QPushButton(
+            trash_icon, translate(self.language, "Clear results")
+        )
         self.clear_results_button.clicked.connect(self._clear_results)
         results_header.addWidget(self.clear_results_button)
         right_column.addWidget(results_header_widget)
@@ -177,26 +196,30 @@ class ConvertisseurQt(QMainWindow):
 
         footer = QHBoxLayout()
         footer.setSpacing(14)
-        self.options = ConversionOptions(footer)
+        self.options = ConversionOptions(footer, self.language)
         footer.addSpacing(8)
-        self.overwrite_check = QCheckBox("Écraser les fichiers existants")
+        self.overwrite_check = QCheckBox(
+            translate(self.language, "Overwrite existing files")
+        )
         self.overwrite_check.setChecked(CoreConversionOptions().overwrite)
         footer.addWidget(self.overwrite_check)
-        self.delete_check = QCheckBox("Supprimer les fichiers source après conversion réussie")
+        self.delete_check = QCheckBox(
+            translate(self.language, "Delete source files after successful conversion")
+        )
         footer.addWidget(self.delete_check)
         footer.addStretch(1)
         layout.addLayout(footer)
 
         bottom_bar = QHBoxLayout()
         self.status_label = QLabel(
-            "Déposez des fichiers audio ou des dossiers dans la liste des entrées."
+            translate(self.language, "Drop audio files or folders into the input list.")
         )
         bottom_bar.addWidget(self.status_label, 1)
         self.progress = QProgressBar()
         self.progress.setValue(0)
         self.progress.setMaximumWidth(220)
         bottom_bar.addWidget(self.progress)
-        self.convert_button = QPushButton("Convertir")
+        self.convert_button = QPushButton(translate(self.language, "Convert"))
         self.convert_button.setDefault(True)
         self.convert_button.clicked.connect(self._start_conversion)
         bottom_bar.addWidget(self.convert_button)
@@ -205,6 +228,38 @@ class ConvertisseurQt(QMainWindow):
         self.setCentralWidget(central)
         self._load_preferences()
         self._source_controls_enabled = True
+
+    def _retranslate_ui(self) -> None:
+        language = self.language
+        tr = lambda text: translate(language, text)
+        self.setWindowTitle(tr("M4A to MP3 Converter"))
+        self.input_tree.setToolTip(
+            tr("Drop audio files or folders here. Select an item and press Delete to remove it.")
+        )
+        self.add_files_button.setText(tr("Add audio files…"))
+        self.add_folder_button.setText(tr("Add a folder…"))
+        self.output_folder_label.setText(tr("Output folder"))
+        self.output_folder_field.setPlaceholderText(tr("Same folder as sources"))
+        self.output_folder_button.setText(tr("Browse…"))
+        self.preferences_button.setToolTip(tr("Preferences"))
+        self.preferences_button.setAccessibleName(tr("Preferences"))
+        self.input_header_label.setText(tr("Audio inputs"))
+        self.clear_sources_button.setText(tr("Clear inputs"))
+        self.results_header_label.setText(tr("Results"))
+        self.clear_results_button.setText(tr("Clear results"))
+        self.overwrite_check.setText(tr("Overwrite existing files"))
+        self.delete_check.setText(tr("Delete source files after successful conversion"))
+        if not self.busy:
+            if self.source_tree.sources:
+                self.status_label.setText(
+                    tr("{} file(s) in the list.").format(len(self.source_tree.sources))
+                )
+            else:
+                self.status_label.setText(tr("Drop audio files or folders into the input list."))
+        self.convert_button.setText(tr("Convert"))
+        self.options.retranslate(language)
+        self.source_tree.language = language
+        self.results.retranslate(language)
 
     def _load_preferences(self) -> None:
         self.output_folder_field.setText(str(self.settings.value("output_folder", "")))
@@ -222,7 +277,8 @@ class ConvertisseurQt(QMainWindow):
             self.options.quality,
             self.overwrite_check.isChecked(),
             self.delete_check.isChecked(),
-            self,
+            language=self.language,
+            parent=self,
         )
         dialog_exec = (
             self.preferences_dialog.exec
@@ -240,7 +296,11 @@ class ConvertisseurQt(QMainWindow):
             self.settings.setValue("quality", self.options.quality)
             self.settings.setValue("overwrite", self.overwrite_check.isChecked())
             self.settings.setValue("delete_sources", self.delete_check.isChecked())
+            self.settings.setValue("language", self.preferences_dialog.language_combo.currentData())
             self.settings.sync()
+            if self.language != self.preferences_dialog.language_combo.currentData():
+                self.language = self.preferences_dialog.language_combo.currentData()
+                self._retranslate_ui()
 
     def _set_status(self, message: str) -> None:
         self.status_label.setText(message)
@@ -255,19 +315,21 @@ class ConvertisseurQt(QMainWindow):
     def _choose_files(self) -> None:
         paths, _ = QFileDialog.getOpenFileNames(
             self,
-            "Choisir des fichiers audio",
+            translate(self.language, "Choose audio files"),
             "",
-            f"Fichiers audio ({' '.join(f'*{extension}' for extension in sorted(SUPPORTED_AUDIO_EXTENSIONS))});;Tous les fichiers (*)",
+            f"{translate(self.language, 'Audio files ({})').format(' '.join(f'*{extension}' for extension in sorted(SUPPORTED_AUDIO_EXTENSIONS)))};;{translate(self.language, 'All files (*)')}",
         )
         self.source_tree.add_paths([Path(path) for path in paths])
 
     def _choose_folder(self) -> None:
-        path = QFileDialog.getExistingDirectory(self, "Choisir un dossier audio")
+        path = QFileDialog.getExistingDirectory(self, translate(self.language, "Choose an audio folder"))
         if path:
             self.source_tree.add_path(Path(path))
 
     def _choose_output_folder(self) -> None:
-        path = QFileDialog.getExistingDirectory(self, "Choisir le dossier de sortie")
+        path = QFileDialog.getExistingDirectory(
+            self, translate(self.language, "Choose output folder")
+        )
         if path:
             self.output_folder_field.setText(path)
             self.settings.setValue("output_folder", path)
@@ -279,13 +341,15 @@ class ConvertisseurQt(QMainWindow):
         if not ffmpeg_available():
             QMessageBox.critical(
                 self,
-                "ffmpeg introuvable",
-                "Installez ffmpeg et assurez-vous qu’il est accessible dans le PATH.",
+                translate(self.language, "ffmpeg not found"),
+                translate(self.language, "Install ffmpeg and make sure it is available on PATH."),
             )
             return
         if not self.source_tree.sources:
             QMessageBox.information(
-                self, "Aucun fichier", "Ajoutez des fichiers M4A ou un dossier avant de convertir."
+                self,
+                translate(self.language, "No files"),
+                translate(self.language, "Add M4A files or a folder before converting."),
             )
             return
 
@@ -308,7 +372,9 @@ class ConvertisseurQt(QMainWindow):
         self.progress.setValue(0)
         self.convert_button.setEnabled(False)
         self._set_source_controls_enabled(False)
-        self.status_label.setText(f"Conversion de {self.total} fichier(s)…")
+        self.status_label.setText(
+            translate(self.language, "Conversion of {} file(s)…").format(self.total)
+        )
 
         self.thread_pool.setMaxThreadCount(self.options.jobs)
         conversion_options = CoreConversionOptions(
@@ -366,20 +432,31 @@ class ConvertisseurQt(QMainWindow):
         self.convert_button.setEnabled(True)
         self._set_source_controls_enabled(True)
         self.status_label.setText(
-            f"Terminé : {self.total - self.errors} résultat(s) sans erreur, {self.errors} erreur(s)."
+            translate(self.language, "Finished: {} result(s) without errors, {} error(s).").format(
+                self.total - self.errors, self.errors
+            )
         )
 
     def closeEvent(self, event) -> None:
         if self.busy:
-            answer = QMessageBox.question(
-                self,
-                "Conversion en cours",
-                "Une conversion est en cours. Voulez-vous vraiment quitter ?",
-                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
-                if hasattr(QMessageBox, "StandardButton")
-                else QMessageBox.Yes | QMessageBox.No,
+            question = QMessageBox(self)
+            question.setIcon(
+                QMessageBox.Icon.Question
+                if hasattr(QMessageBox, "Icon")
+                else QMessageBox.Question
+            )
+            question.setWindowTitle(translate(self.language, "Conversion in progress"))
+            question.setText(
+                translate(self.language, "A conversion is in progress. Do you really want to quit?")
             )
             yes = QMessageBox.StandardButton.Yes if hasattr(QMessageBox, "StandardButton") else QMessageBox.Yes
+            no = QMessageBox.StandardButton.No if hasattr(QMessageBox, "StandardButton") else QMessageBox.No
+            question.addButton(yes)
+            question.addButton(no)
+            question.button(yes).setText(translate(self.language, "Yes"))
+            question.button(no).setText(translate(self.language, "No"))
+            question.setDefaultButton(no)
+            answer = question.exec() if hasattr(question, "exec") else question.exec_()
             if answer != yes:
                 event.ignore()
                 return

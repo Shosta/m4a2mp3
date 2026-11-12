@@ -4,6 +4,7 @@ from typing import Dict, List, Optional, Set
 from core import discover_audio, is_supported_audio, normalized_path_key
 
 from .artwork import ArtworkManager
+from .i18n import translate
 from .drop_tree import DropTreeWidget
 from .qt_compat import QIcon, QStyle, Qt, QTreeWidgetItem
 
@@ -19,6 +20,7 @@ class SourceTree:
         self.planned_destinations: Dict[str, str] = {}
         self.items: Dict[str, QTreeWidgetItem] = {}
         self.status_callback = lambda message: None
+        self.language = "fr"
         self.folder_icon = QIcon.fromTheme("folder", tree.style().standardIcon(QStyle.StandardPixmap.SP_DirIcon))
         self.audio_icon = QIcon.fromTheme("audio-x-generic", tree.style().standardIcon(QStyle.StandardPixmap.SP_FileIcon))
 
@@ -53,15 +55,17 @@ class SourceTree:
             elif is_supported_audio(path):
                 self._add_file(path, reparent=False, root=path.parent)
         except OSError as exc:
-            self.status_callback(f"Impossible d’inspecter {path}: {exc}")
+            self.status_callback(
+                f"{translate(self.language, 'Inspect failed: {}').format(path)}: {exc}"
+            )
 
     def _add_directory(self, path: Path, parent: Optional[QTreeWidgetItem] = None) -> Optional[QTreeWidgetItem]:
         audio_files = discover_audio(
             path,
             on_error=lambda candidate, exc: self.status_callback(
-                f"Impossible d’inspecter {candidate}: {exc}"
+                f"{translate(self.language, 'Could not inspect {}: {}').format(candidate, exc)}"
                 if candidate != path
-                else f"Impossible de parcourir {path}: {exc}"
+                else f"{translate(self.language, 'Could not browse {}: {}').format(path, exc)}"
             ),
         )
         if not audio_files:
@@ -117,7 +121,9 @@ class SourceTree:
             self._attach(self.items[key], parent)
         if is_new:
             self.artwork.request(path, self.items[key])
-        self.status_callback(f"{len(self.sources)} fichier(s) dans la liste.")
+        self.status_callback(
+            translate(self.language, "{} file(s) in the list.").format(len(self.sources))
+        )
 
     def _attach(self, item: QTreeWidgetItem, parent: Optional[QTreeWidgetItem]) -> None:
         if item.parent() is parent:
@@ -140,7 +146,9 @@ class SourceTree:
         roots = [item for item in selected if not self._has_selected_ancestor(item, selected_ids)]
         for item in roots:
             self._remove_item(item)
-        self.status_callback(f"{len(self.sources)} fichier(s) dans la liste.")
+        self.status_callback(
+            translate(self.language, "{} file(s) in the list.").format(len(self.sources))
+        )
 
     def _has_selected_ancestor(self, item: QTreeWidgetItem, selected_ids: Set[int]) -> bool:
         parent = item.parent()

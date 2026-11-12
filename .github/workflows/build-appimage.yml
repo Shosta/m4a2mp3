@@ -35,6 +35,7 @@ jobs:
           --hidden-import core
           --hidden-import ui
           --hidden-import ui.qt_compat
+          --hidden-import ui.i18n
           --hidden-import ui.drop_tree
           --hidden-import ui.options
           --hidden-import ui.artwork
