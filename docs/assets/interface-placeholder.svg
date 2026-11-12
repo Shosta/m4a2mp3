@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 900" role="img" aria-labelledby="title desc">
+  <title id="title">Abstract album-cover-style audio illustration</title>
+  <desc id="desc">Abstract illustration of an audio record and a conversion indicator.</desc>
+  <defs>
+    <pattern id="lines" width="12" height="12" patternUnits="userSpaceOnUse">
+      <path d="M0 11.5h12" stroke="#f0e6d2" stroke-opacity=".12"/>
+    </pattern>
+    <pattern id="dots" width="22" height="22" patternUnits="userSpaceOnUse">
+      <circle cx="2" cy="2" r="1.4" fill="#f0e6d2" fill-opacity=".4"/>
+    </pattern>
+  </defs>
+  <rect width="900" height="900" fill="#bd442c"/>
+  <rect width="900" height="900" fill="url(#lines)"/>
+  <circle cx="450" cy="445" r="332" fill="#101a2b"/>
+  <circle cx="450" cy="445" r="290" fill="url(#dots)" stroke="#d3a85a" stroke-width="2"/>
+  <circle cx="450" cy="445" r="207" fill="none" stroke="#d3a85a" stroke-opacity=".48" stroke-width="2"/>
+  <circle cx="450" cy="445" r="115" fill="#e94c32"/>
+  <circle cx="450" cy="445" r="16" fill="#f0e6d2"/>
+  <path d="M450 445 642 273" fill="none" stroke="#f0e6d2" stroke-width="7" stroke-linecap="round"/>
+  <path d="M603 248 655 264 646 314" fill="none" stroke="#f0e6d2" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="450" y="95" fill="#f0e6d2" font-family="Arial,sans-serif" font-size="22" font-weight="700" letter-spacing="8" text-anchor="middle">M4A — 2 — MP3</text>
+</svg>
