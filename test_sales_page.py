@@ -54,6 +54,10 @@ class SalesPageTests(unittest.TestCase):
         self.assertIn("replace with a screenshot", self.script)
         self.assertIn("audio record", self.placeholder.lower())
 
+    def test_app_icon_is_used_as_favicon(self):
+        self.assertIn('<link rel="icon" type="image/png" href="assets/m4a2mp3.png">', self.html)
+        self.assertTrue((ROOT / "docs/assets/m4a2mp3.png").is_file())
+
     def test_relative_assets_and_no_external_runtime_dependencies(self):
         self.assertIn('href="assets/site.css"', self.html)
         self.assertIn('src="assets/site.js"', self.html)
