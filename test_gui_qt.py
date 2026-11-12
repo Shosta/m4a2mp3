@@ -18,6 +18,25 @@ from ui.output_plan import OutputPlan
 
 
 class GuiQtOutputTests(unittest.TestCase):
+    def test_language_catalogues_are_importable_without_qt_translation_resources(self):
+        from ui.i18n import CATALOGUES, LANGUAGES
+
+        self.assertEqual(set(CATALOGUES), {"fr", "en", "da"})
+        self.assertEqual({item["code"] for item in LANGUAGES}, set(CATALOGUES))
+
+    def test_language_catalogues_define_native_names_flags_and_translations(self):
+        from ui.i18n import LANGUAGES, translate
+
+        self.assertEqual(
+            [(language["code"], language["name"], language["flag"]) for language in LANGUAGES],
+            [("fr", "Français", "🇫🇷"), ("en", "English", "🇬🇧"), ("da", "Dansk", "🇩🇰")],
+        )
+        self.assertEqual(translate("fr", "Preferences"), "Préférences")
+        self.assertEqual(translate("en", "Preferences"), "Preferences")
+        self.assertEqual(translate("da", "Preferences"), "Indstillinger")
+        self.assertEqual(translate("en", "Uncatalogued"), "Uncatalogued")
+        self.assertEqual(translate("invalid", "Preferences"), "Préférences")
+
     def setUp(self):
         self.settings_directory = tempfile.TemporaryDirectory()
         self.addCleanup(self.settings_directory.cleanup)
@@ -80,7 +99,7 @@ class GuiQtOutputTests(unittest.TestCase):
         from ui.options import ConversionOptions
         from ui.qt_compat import QHBoxLayout
 
-        options = ConversionOptions(QHBoxLayout())
+        options = ConversionOptions(QHBoxLayout(), "fr")
 
         self.assertEqual(options.quality_combo.count(), 3)
         self.assertEqual(
@@ -92,8 +111,73 @@ class GuiQtOutputTests(unittest.TestCase):
             [options.quality_combo.itemText(index) for index in range(3)],
             ["Haute", "Équilibrée", "Compacte"],
         )
+        options.retranslate("da")
+        self.assertEqual(options.quality_label.text(), "Lydkvalitet")
+        self.assertEqual(options.quality_combo.itemText(0), "Høj")
         self.assertEqual(options.jobs, 4)
         self.assertFalse(hasattr(options, "jobs_spin"))
+
+    def test_startup_restores_saved_language(self):
+        self.settings.setValue("language", "da")
+        self.settings.sync()
+
+        window = gui_qt.ConvertisseurQt()
+        self.addCleanup(window.artwork.shutdown)
+        self.addCleanup(window.close)
+
+        self.assertEqual(window.language, "da")
+        self.assertEqual(window.add_files_button.text(), "Tilføj lydfiler…")
+
+    def test_preferences_dialog_shows_native_language_choices_and_selection(self):
+        from ui.options import PreferencesDialog
+
+        dialog = PreferencesDialog("", "0", True, False, language="en")
+
+        self.assertEqual(dialog.language_combo.count(), 3)
+        self.assertEqual(
+            [dialog.language_combo.itemData(index) for index in range(3)], ["fr", "en", "da"]
+        )
+        self.assertEqual(dialog.language_combo.currentData(), "en")
+        self.assertIn("🇩🇰", dialog.language_combo.itemText(2))
+        self.assertIn("Dansk", dialog.language_combo.itemText(2))
+        self.assertEqual(dialog.layout().itemAt(0).layout().itemAt(0).widget().text(), "Language")
+
+    def test_language_acceptance_is_persisted_and_applied_without_losing_state(self):
+        window = gui_qt.ConvertisseurQt()
+        self.addCleanup(window.artwork.shutdown)
+        self.addCleanup(window.close)
+        with tempfile.TemporaryDirectory() as directory:
+            source = Path(directory) / "track.m4a"
+            source.touch()
+            window.source_tree.add_path(source)
+            result_source = Path(directory) / "failed.m4a"
+            window.results.add_result(
+                core.ConversionResult(result_source, core.ConversionStatus.ERROR, "failed"),
+                result_source.parent,
+            )
+            original_quality = window.options.quality
+            window.output_folder_field.setText("/tmp/kept-output")
+            item_count = window.input_tree.topLevelItemCount()
+
+            def accept_preferences():
+                dialog = window.preferences_dialog
+                dialog.language_combo.setCurrentIndex(2)
+                return 1
+
+            with patch.object(gui_qt.PreferencesDialog, "exec", side_effect=accept_preferences):
+                window._open_preferences()
+
+        self.assertEqual(window.language, "da")
+        self.assertEqual(self.settings.value("language"), "da")
+        self.assertEqual(window.add_files_button.text(), "Tilføj lydfiler…")
+        self.assertEqual(window.status_label.text(), "1 fil(er) på listen.")
+        self.assertEqual(window.options.quality, original_quality)
+        self.assertEqual(window.output_folder_field.text(), "/tmp/kept-output")
+        self.assertEqual(window.input_tree.topLevelItemCount(), item_count)
+        self.assertEqual(window.output_tree.topLevelItemCount(), 1)
+        self.assertIn("FEJLET", window.output_tree.topLevelItem(0).child(0).text(0))
+        self.assertNotIn("ERREUR", window.output_tree.topLevelItem(0).child(0).text(0))
+        self.assertEqual(window.output_folder_field.text(), "/tmp/kept-output")
 
     def test_preferences_restore_values_from_qsettings(self):
         self.settings.setValue("output_folder", "/tmp/saved-output")
@@ -113,6 +197,17 @@ class GuiQtOutputTests(unittest.TestCase):
         window.show()
         self.app.processEvents()
         self.assertTrue(window.delete_check.isVisible())
+
+    def test_invalid_saved_language_falls_back_to_french(self):
+        self.settings.setValue("language", "xx")
+        self.settings.sync()
+
+        window = gui_qt.ConvertisseurQt()
+        self.addCleanup(window.artwork.shutdown)
+        self.addCleanup(window.close)
+
+        self.assertEqual(window.language, "fr")
+        self.assertEqual(window.add_files_button.text(), "Ajouter des fichiers audio…")
 
     def test_invalid_saved_quality_falls_back_to_highest_quality(self):
         self.settings.setValue("quality", "invalid")
@@ -175,6 +270,7 @@ class GuiQtOutputTests(unittest.TestCase):
             dialog.quality_combo.setCurrentIndex(2)
             dialog.overwrite_check.setChecked(False)
             dialog.delete_check.setChecked(True)
+            dialog.language_combo.setCurrentIndex(2)
             return 0
 
         with patch.object(
@@ -184,6 +280,8 @@ class GuiQtOutputTests(unittest.TestCase):
 
         settings = self.settings
         self.assertEqual(window.output_folder_field.text(), "/tmp/current-output")
+        self.assertEqual(window.language, "fr")
+        self.assertFalse(settings.contains("language"))
         self.assertEqual(window.options.quality, initial_quality)
         self.assertTrue(window.overwrite_check.isChecked())
         self.assertFalse(window.delete_check.isChecked())
@@ -197,6 +295,66 @@ class GuiQtOutputTests(unittest.TestCase):
         self.assertIsNotNone(window.preferences_button)
         self.assertEqual(window.preferences_button.text(), "")
         self.assertEqual(window.preferences_button.toolTip(), "Préférences")
+
+    def test_close_confirmation_buttons_are_translated(self):
+        window = gui_qt.ConvertisseurQt()
+        self.addCleanup(window.artwork.shutdown)
+        self.addCleanup(window.close)
+        window.busy = True
+        observed = {}
+
+        class FakeButton:
+            def __init__(self):
+                self.text_value = ""
+
+            def setText(self, text):
+                self.text_value = text
+
+        class FakeQuestion:
+            Icon = gui_qt.QMessageBox.Icon
+            StandardButton = gui_qt.QMessageBox.StandardButton
+
+            def __init__(self, parent):
+                observed["parent"] = parent
+                self.buttons = {}
+
+            def setIcon(self, icon):
+                pass
+
+            def setWindowTitle(self, title):
+                observed["title"] = title
+
+            def setText(self, text):
+                observed["message"] = text
+
+            def addButton(self, button):
+                self.buttons[button] = FakeButton()
+
+            def button(self, button):
+                return self.buttons[button]
+
+            def setDefaultButton(self, button):
+                pass
+
+            def exec(self):
+                observed["buttons"] = [button.text_value for button in self.buttons.values()]
+                return self.StandardButton.Yes
+
+        class FakeEvent:
+            def accept(self):
+                observed["accepted"] = True
+
+            def ignore(self):
+                observed["ignored"] = True
+
+        window.language = "da"
+        with patch.object(gui_qt, "QMessageBox", FakeQuestion):
+            window.closeEvent(FakeEvent())
+        window.busy = False
+
+        self.assertEqual(observed["title"], "Konvertering i gang")
+        self.assertEqual(observed["buttons"], ["Ja", "Nej"])
+        self.assertTrue(observed["accepted"])
 
     def test_main_window_uses_generic_source_labels(self):
         window = gui_qt.ConvertisseurQt()
