@@ -10,7 +10,7 @@ from unittest.mock import patch
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
-from ui.qt_compat import QApplication
+from ui.qt_compat import QApplication, QSettings
 
 import core
 import gui_qt
@@ -19,6 +19,17 @@ from ui.output_plan import OutputPlan
 
 class GuiQtOutputTests(unittest.TestCase):
     def setUp(self):
+        self.settings_directory = tempfile.TemporaryDirectory()
+        self.addCleanup(self.settings_directory.cleanup)
+        settings_format = (
+            QSettings.Format.IniFormat if hasattr(QSettings, "Format") else QSettings.IniFormat
+        )
+        settings_file = str(Path(self.settings_directory.name) / "preferences.ini")
+        self.settings = QSettings(settings_file, settings_format)
+        self.settings.clear()
+        settings_patch = patch("gui_qt.QSettings", return_value=self.settings)
+        settings_patch.start()
+        self.addCleanup(settings_patch.stop)
         artwork_request = patch.object(gui_qt.ArtworkManager, "request")
         artwork_request.start()
         self.addCleanup(artwork_request.stop)
@@ -27,14 +38,15 @@ class GuiQtOutputTests(unittest.TestCase):
         qt_core = types.ModuleType("PyQt5.QtCore")
         qt_gui = types.ModuleType("PyQt5.QtGui")
         qt_widgets = types.ModuleType("PyQt5.QtWidgets")
-        for name in ("QObject", "QRunnable", "QSize", "Qt", "QThreadPool", "pyqtSignal"):
+        for name in ("QObject", "QRunnable", "QSize", "Qt", "QThreadPool", "QSettings", "pyqtSignal"):
             setattr(qt_core, name, object)
         for name in ("QIcon", "QPixmap"):
             setattr(qt_gui, name, object)
         for name in (
             "QAbstractItemView", "QApplication", "QCheckBox", "QComboBox", "QFileDialog",
             "QHBoxLayout", "QLabel", "QLineEdit", "QListWidget", "QMainWindow", "QMessageBox",
-            "QProgressBar", "QPushButton", "QSpinBox", "QStyle", "QTreeWidget",
+            "QProgressBar", "QPushButton", "QDialog", "QDialogButtonBox", "QFormLayout",
+            "QSpinBox", "QStyle", "QTreeWidget",
             "QTreeWidgetItem", "QVBoxLayout", "QWidget",
         ):
             setattr(qt_widgets, name, object)
@@ -82,6 +94,109 @@ class GuiQtOutputTests(unittest.TestCase):
         )
         self.assertEqual(options.jobs, 4)
         self.assertFalse(hasattr(options, "jobs_spin"))
+
+    def test_preferences_restore_values_from_qsettings(self):
+        self.settings.setValue("output_folder", "/tmp/saved-output")
+        self.settings.setValue("quality", "4")
+        self.settings.setValue("overwrite", False)
+        self.settings.setValue("delete_sources", True)
+        self.settings.sync()
+
+        window = gui_qt.ConvertisseurQt()
+        self.addCleanup(window.artwork.shutdown)
+        self.addCleanup(window.close)
+
+        self.assertEqual(window.output_folder_field.text(), "/tmp/saved-output")
+        self.assertEqual(window.options.quality, "4")
+        self.assertFalse(window.overwrite_check.isChecked())
+        self.assertTrue(window.delete_check.isChecked())
+        window.show()
+        self.app.processEvents()
+        self.assertTrue(window.delete_check.isVisible())
+
+    def test_invalid_saved_quality_falls_back_to_highest_quality(self):
+        self.settings.setValue("quality", "invalid")
+        self.settings.sync()
+
+        window = gui_qt.ConvertisseurQt()
+        self.addCleanup(window.artwork.shutdown)
+        self.addCleanup(window.close)
+
+        self.assertEqual(window.options.quality, "0")
+
+    def test_preferences_default_to_current_values_when_qsettings_is_empty(self):
+        window = gui_qt.ConvertisseurQt()
+        self.addCleanup(window.artwork.shutdown)
+        self.addCleanup(window.close)
+
+        self.assertEqual(window.output_folder_field.text(), "")
+        self.assertEqual(window.options.quality, "0")
+        self.assertEqual(window.overwrite_check.isChecked(), core.ConversionOptions().overwrite)
+        self.assertFalse(window.delete_check.isChecked())
+
+    def test_preferences_dialog_acceptance_saves_all_values(self):
+        window = gui_qt.ConvertisseurQt()
+        self.addCleanup(window.artwork.shutdown)
+        self.addCleanup(window.close)
+
+        def accept_preferences():
+            dialog = window.preferences_dialog
+            dialog.output_folder_field.setText("/tmp/new-output")
+            dialog.quality_combo.setCurrentIndex(1)
+            dialog.overwrite_check.setChecked(False)
+            dialog.delete_check.setChecked(True)
+            return 1
+
+        with patch.object(
+            gui_qt.PreferencesDialog, "exec", side_effect=accept_preferences
+        ):
+            window._open_preferences()
+
+        settings = self.settings
+        self.assertEqual(settings.value("output_folder"), "/tmp/new-output")
+        self.assertEqual(settings.value("quality"), "4")
+        self.assertFalse(settings.value("overwrite", type=bool))
+        self.assertTrue(settings.value("delete_sources", type=bool))
+        self.assertEqual(window.output_folder_field.text(), "/tmp/new-output")
+        self.assertEqual(window.options.quality, "4")
+        self.assertFalse(window.overwrite_check.isChecked())
+        self.assertTrue(window.delete_check.isChecked())
+
+    def test_preferences_dialog_rejection_keeps_current_values(self):
+        window = gui_qt.ConvertisseurQt()
+        self.addCleanup(window.artwork.shutdown)
+        self.addCleanup(window.close)
+        window.output_folder_field.setText("/tmp/current-output")
+        initial_quality = window.options.quality
+
+        def reject_preferences():
+            dialog = window.preferences_dialog
+            dialog.output_folder_field.setText("/tmp/unused-output")
+            dialog.quality_combo.setCurrentIndex(2)
+            dialog.overwrite_check.setChecked(False)
+            dialog.delete_check.setChecked(True)
+            return 0
+
+        with patch.object(
+            gui_qt.PreferencesDialog, "exec", side_effect=reject_preferences
+        ):
+            window._open_preferences()
+
+        settings = self.settings
+        self.assertEqual(window.output_folder_field.text(), "/tmp/current-output")
+        self.assertEqual(window.options.quality, initial_quality)
+        self.assertTrue(window.overwrite_check.isChecked())
+        self.assertFalse(window.delete_check.isChecked())
+        self.assertFalse(settings.contains("output_folder"))
+
+    def test_preferences_button_is_next_to_output_folder_browse_button(self):
+        window = gui_qt.ConvertisseurQt()
+        self.addCleanup(window.artwork.shutdown)
+        self.addCleanup(window.close)
+
+        self.assertIsNotNone(window.preferences_button)
+        self.assertEqual(window.preferences_button.text(), "")
+        self.assertEqual(window.preferences_button.toolTip(), "Préférences")
 
     def test_main_window_uses_generic_source_labels(self):
         window = gui_qt.ConvertisseurQt()
@@ -208,6 +323,9 @@ class GuiQtOutputTests(unittest.TestCase):
             window._choose_output_folder()
 
         self.assertEqual(window.output_folder_field.text(), "/tmp/common-output")
+        self.assertEqual(
+            self.settings.value("output_folder"), "/tmp/common-output"
+        )
 
     def test_preflight_failures_are_shown_counted_and_never_submitted(self):
         window = gui_qt.ConvertisseurQt()

@@ -1,6 +1,68 @@
 from core import DEFAULT_JOBS
 
-from .qt_compat import QComboBox, QHBoxLayout, QLabel, QVBoxLayout
+from .qt_compat import (
+    QCheckBox,
+    QComboBox,
+    QDialog,
+    QDialogButtonBox,
+    QFileDialog,
+    QFormLayout,
+    QHBoxLayout,
+    QLabel,
+    QLineEdit,
+    QPushButton,
+    QVBoxLayout,
+)
+
+
+class PreferencesDialog(QDialog):
+    def __init__(
+        self,
+        output_folder: str,
+        quality: str,
+        overwrite: bool,
+        delete_sources: bool,
+        parent=None,
+    ) -> None:
+        super().__init__(parent)
+        self.setWindowTitle("Préférences")
+        layout = QVBoxLayout(self)
+        form = QFormLayout()
+        self.output_folder_field = QLineEdit(output_folder)
+        browse_button = QPushButton("Parcourir…")
+        browse_button.clicked.connect(self._choose_output_folder)
+        folder_layout = QHBoxLayout()
+        folder_layout.addWidget(self.output_folder_field, 1)
+        folder_layout.addWidget(browse_button)
+        form.addRow("Dossier de sortie", folder_layout)
+        self.quality_combo = QComboBox()
+        for label, value in [("Haute", "0"), ("Équilibrée", "4"), ("Compacte", "8")]:
+            self.quality_combo.addItem(label, value)
+        index = self.quality_combo.findData(quality)
+        self.quality_combo.setCurrentIndex(index if index >= 0 else 0)
+        form.addRow("Qualité audio", self.quality_combo)
+        self.overwrite_check = QCheckBox("Écraser les fichiers existants")
+        self.overwrite_check.setChecked(overwrite)
+        form.addRow(self.overwrite_check)
+        self.delete_check = QCheckBox("Supprimer les fichiers source après conversion réussie")
+        self.delete_check.setChecked(delete_sources)
+        form.addRow(self.delete_check)
+        layout.addLayout(form)
+        buttons = QDialogButtonBox(
+            QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel
+            if hasattr(QDialogButtonBox, "StandardButton")
+            else QDialogButtonBox.Ok | QDialogButtonBox.Cancel
+        )
+        buttons.accepted.connect(self.accept)
+        buttons.rejected.connect(self.reject)
+        layout.addWidget(buttons)
+
+    def _choose_output_folder(self) -> None:
+        path = QFileDialog.getExistingDirectory(
+            self, "Choisir le dossier de sortie", self.output_folder_field.text()
+        )
+        if path:
+            self.output_folder_field.setText(path)
 
 
 class ConversionOptions:
