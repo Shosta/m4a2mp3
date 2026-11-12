@@ -125,9 +125,18 @@ class ConvertisseurQt(QMainWindow):
         columns.setSpacing(14)
         left_column = QVBoxLayout()
         left_column.setSpacing(6)
-        input_header = QLabel("Entrées audio")
-        input_header.setFixedHeight(28)
-        left_column.addWidget(input_header)
+        input_header = QHBoxLayout()
+        input_header.setContentsMargins(0, 0, 0, 0)
+        input_header_widget = QWidget()
+        input_header_widget.setFixedHeight(28)
+        input_header_widget.setLayout(input_header)
+        input_header.addWidget(QLabel("Entrées audio"))
+        input_header.addStretch(1)
+        trash_icon = self.style().standardIcon(QStyle.StandardPixmap.SP_TrashIcon)
+        self.clear_sources_button = QPushButton(trash_icon, "Vider les entrées")
+        self.clear_sources_button.clicked.connect(self._clear_sources)
+        input_header.addWidget(self.clear_sources_button)
+        left_column.addWidget(input_header_widget)
         left_column.addWidget(self.input_tree, 1)
 
         right_column = QVBoxLayout()
@@ -139,7 +148,6 @@ class ConvertisseurQt(QMainWindow):
         results_header_widget.setLayout(results_header)
         results_header.addWidget(QLabel("Résultats"))
         results_header.addStretch(1)
-        trash_icon = self.style().standardIcon(QStyle.StandardPixmap.SP_TrashIcon)
         self.clear_results_button = QPushButton(trash_icon, "Vider les résultats")
         self.clear_results_button.clicked.connect(self._clear_results)
         results_header.addWidget(self.clear_results_button)
@@ -191,6 +199,10 @@ class ConvertisseurQt(QMainWindow):
 
     def _clear_results(self) -> None:
         self.results.clear()
+
+    def _clear_sources(self) -> None:
+        self.input_tree.selectAll()
+        self.source_tree.remove_selected()
 
     def _choose_files(self) -> None:
         paths, _ = QFileDialog.getOpenFileNames(

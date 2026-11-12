@@ -129,6 +129,38 @@ class GuiQtOutputTests(unittest.TestCase):
         self.assertEqual(window.output_tree.topLevelItemCount(), 0)
         self.assertEqual(window.source_tree.sources, {})
 
+    def test_clear_sources_button_clears_all_input_entries_only(self):
+        window = gui_qt.ConvertisseurQt()
+        self.addCleanup(window.artwork.shutdown)
+        self.addCleanup(window.close)
+        with tempfile.TemporaryDirectory() as directory:
+            source = Path(directory) / "track.wav"
+            source.touch()
+            window.source_tree.add_path(source)
+            result_source = Path(directory) / "converted.wav"
+            window.results.add_result(
+                core.ConversionResult(result_source, core.ConversionStatus.SUCCESS, "converti"),
+                result_source.parent,
+            )
+
+            window.clear_sources_button.click()
+
+            self.assertEqual(window.source_tree.sources, {})
+            self.assertEqual(window.source_tree.roots, {})
+            self.assertEqual(window.input_tree.topLevelItemCount(), 0)
+            self.assertEqual(window.output_tree.topLevelItemCount(), 1)
+
+    def test_clear_sources_button_uses_trash_icon(self):
+        window = gui_qt.ConvertisseurQt()
+        self.addCleanup(window.artwork.shutdown)
+        self.addCleanup(window.close)
+
+        self.assertFalse(window.clear_sources_button.icon().isNull())
+        self.assertEqual(
+            window.clear_sources_button.icon().cacheKey(),
+            window.clear_results_button.icon().cacheKey(),
+        )
+
     def test_source_tree_adds_each_supported_audio_format_individually(self):
         window = gui_qt.ConvertisseurQt()
         self.addCleanup(window.artwork.shutdown)
