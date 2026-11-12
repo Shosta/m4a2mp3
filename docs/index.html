@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#101a2b">
+  <meta name="description" content="Convertissez vos fichiers audio en MP3 en conservant leurs métadonnées.">
+  <title>m4a-2-mp3 — Vos morceaux, prêts à emporter</title>
+  <link rel="stylesheet" href="assets/site.css">
+  <script src="assets/site.js" defer></script>
+</head>
+<body>
+  <header class="masthead">
+    <a class="wordmark" href="#top" aria-label="m4a-2-mp3">m4a<span>—</span>2<span>—</span>mp3</a>
+    <nav class="top-nav" aria-label="Navigation principale" data-i18n-aria-label="navLabel">
+      <a href="#features" data-i18n="navFeatures">Fonctions</a>
+      <a href="#how" data-i18n="navHow">Comment ça marche</a>
+    </nav>
+    <label class="language-picker-label" for="language-picker">
+      <span class="visually-hidden" id="language-label" data-i18n="languageLabel">Choisir la langue</span>
+      <select class="language-picker" id="language-picker" aria-labelledby="language-label">
+        <option value="fr" selected>🇫🇷 Français</option>
+        <option value="en">🇬🇧 English</option>
+        <option value="da">🇩🇰 Dansk</option>
+      </select>
+    </label>
+  </header>
+
+  <main id="top">
+    <section class="cover-story" aria-labelledby="hero-title">
+      <div class="hero-copy">
+        <h1 id="hero-title" data-i18n="heroTitle">Vos morceaux,<br>prêts à <em>emporter.</em></h1>
+        <p class="release-line"><span class="release-dot"></span><span data-i18n="release">ÉDITION NUMÉRIQUE · CONVERSION AUDIO</span></p>
+        <p class="hero-description" data-i18n="heroDescription">Transformez vos fichiers M4A, WAV et AIFF en MP3 — en gardant les tags et les pochettes avec la musique.</p>
+        <div class="hero-actions">
+          <a class="download-button" href="https://github.com/Shosta/m4a2mp3/releases" target="_blank" rel="noopener noreferrer">
+            <span data-i18n="download">Télécharger pour Linux</span><span aria-hidden="true">↗</span>
+          </a>
+          <span class="download-note" data-i18n="downloadNote">AppImage · Linux x86_64</span>
+        </div>
+        <p class="hero-footnote"><span data-i18n="sourceIntro">Vous préférez installer vous-même ?</span> <a href="https://github.com/Shosta/m4a2mp3" target="_blank" rel="noopener noreferrer" data-i18n="sourceLink">Voir le code source</a></p>
+      </div>
+
+      <figure class="sleeve-figure">
+        <div class="sleeve-frame">
+          <img src="assets/interface-placeholder.svg" alt="" data-i18n-alt="placeholderAlt">
+          <div class="sleeve-sticker" data-i18n="placeholderLabel">APERÇU PROVISOIRE</div>
+        </div>
+        <figcaption><span data-i18n="figureCaption">FACE A · VOTRE BIBLIOTHÈQUE, EN MP3</span><span>001 / 003</span></figcaption>
+      </figure>
+      <div class="hero-side-note" aria-hidden="true">LOCAL<br>BY DESIGN</div>
+    </section>
+
+    <section class="liner-notes" id="features" aria-labelledby="features-title">
+      <div class="section-heading">
+        <h2 id="features-title" data-i18n="featuresTitle">Chaque détail<br>reste dans le sillon.</h2>
+        <p class="section-mark" data-i18n="featureMark">NOTES DE POCHETTE</p>
+      </div>
+      <div class="notes-list">
+        <article class="liner-note">
+          <span class="note-index">A—01</span>
+          <div><h3 data-i18n="metadataTitle">Les infos voyagent avec vous</h3><p data-i18n="metadataBody">Titres, artistes, albums et pochettes intégrées sont conservés lors de la conversion, selon les métadonnées disponibles dans le fichier source.</p></div>
+        </article>
+        <article class="liner-note">
+          <span class="note-index">A—02</span>
+          <div><h3 data-i18n="batchTitle">Toute la collection, d’un geste</h3><p data-i18n="batchBody">Ajoutez plusieurs fichiers ou un dossier entier. Les sous-dossiers sont parcourus et les résultats apparaissent au fur et à mesure.</p></div>
+        </article>
+        <article class="liner-note">
+          <span class="note-index">A—03</span>
+          <div><h3 data-i18n="controlTitle">À votre qualité, à votre façon</h3><p data-i18n="controlBody">Choisissez la qualité audio, le dossier de destination et l’organisation par artiste et album. La suppression des originaux reste facultative.</p></div>
+        </article>
+      </div>
+      <div class="format-strip"><span data-i18n="formatLabel">FORMATS ENTRANTS</span><strong>M4A</strong><i></i><strong>WAV</strong><i></i><strong>AIFF</strong><span class="strip-out">→ MP3</span></div>
+    </section>
+
+    <section class="workflow" id="how" aria-labelledby="workflow-title">
+      <div class="workflow-copy">
+        <h2 id="workflow-title" data-i18n="workflowTitle">Du dossier<br>au baladeur.</h2>
+        <p class="section-mark" data-i18n="workflowMark">LE MODE D’EMPLOI</p>
+        <p data-i18n="workflowBody">Déposez vos fichiers dans l’application, choisissez où les MP3 seront rangés, puis lancez la conversion. L’interface affiche l’avancement et le résultat de chaque fichier.</p>
+        <p class="requirements-note" data-i18n="requirementsBody">Python 3.9 ou plus récent et FFmpeg sont requis pour utiliser la version depuis les sources.</p>
+        <a class="text-link" href="https://github.com/Shosta/m4a2mp3#pr%C3%A9requis" target="_blank" rel="noopener noreferrer"><span data-i18n="requirements">Voir les prérequis et les instructions</span><span aria-hidden="true">↗</span></a>
+      </div>
+      <div class="record-label" aria-label="Configuration requise" data-i18n-aria-label="requirementsLabel">
+        <div class="label-ring"><span data-i18n="labelTop">LECTURE LOCALE</span><strong>ffmpeg</strong><span data-i18n="labelBottom">REQUIS POUR CONVERTIR</span></div>
+        <p data-i18n="labelCaption">FFmpeg doit être installé et accessible dans le PATH.</p>
+      </div>
+    </section>
+
+    <section class="closing-note">
+      <p data-i18n="closing">Une petite presse à formats, pour votre grande collection.</p>
+      <a href="https://github.com/Shosta/m4a2mp3" target="_blank" rel="noopener noreferrer" data-i18n="githubLink">Explorer le projet sur GitHub ↗</a>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <span>m4a—2—mp3</span>
+    <span data-i18n="license">Logiciel libre · Licence MIT</span>
+    <span>© 2026</span>
+  </footer>
+</body>
+</html>
