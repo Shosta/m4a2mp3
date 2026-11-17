@@ -227,7 +227,21 @@ class ConvertisseurQt(QMainWindow):
 
         self.setCentralWidget(central)
         self._load_preferences()
+        self._apply_watermark_texts()
         self._source_controls_enabled = True
+
+    def _apply_watermark_texts(self) -> None:
+        """Textes du filigrane vinyle (Face A = entrees, Face B = resultats)."""
+        tr = lambda text: translate(self.language, text)
+        self.input_tree.set_watermark_texts(
+            tr("Drop your tracks here"),
+            tr("FILES OR FOLDERS · M4A · WAV · AIFF"),
+            tr("Release to add"),
+        )
+        self.output_tree.set_watermark_texts(
+            tr("Your MP3 files will appear here"),
+            "MP3",
+        )
 
     def _retranslate_ui(self) -> None:
         language = self.language
@@ -260,6 +274,7 @@ class ConvertisseurQt(QMainWindow):
         self.options.retranslate(language)
         self.source_tree.language = language
         self.results.retranslate(language)
+        self._apply_watermark_texts()
 
     def _load_preferences(self) -> None:
         self.output_folder_field.setText(str(self.settings.value("output_folder", "")))
