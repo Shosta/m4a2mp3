@@ -7,10 +7,19 @@ from core import ConversionResult, ConversionStatus, normalized_path_key
 from .artwork import ArtworkManager
 from .i18n import translate
 from .qt_compat import QIcon, Qt, QTreeWidget, QTreeWidgetItem, pyqtSignal
+from .watermark import WatermarkMixin
 
 
-class ResultTreeWidget(QTreeWidget):
+class ResultTreeWidget(WatermarkMixin, QTreeWidget):
     delete_requested = pyqtSignal()
+
+    def __init__(self, *args, **kwargs) -> None:
+        super().__init__(*args, **kwargs)
+        self._init_watermark(face="B", accent="#e08a3c")
+
+    def paintEvent(self, event) -> None:
+        self._paint_watermark_if_empty()
+        super().paintEvent(event)
 
     def keyPressEvent(self, event) -> None:
         delete_key = Qt.Key.Key_Delete if hasattr(Qt, "Key") else Qt.Key_Delete
