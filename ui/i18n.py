@@ -59,6 +59,10 @@ CATALOGUES = {
         "Cancel": "Annuler",
         "Yes": "Oui",
         "No": "Non",
+        "Drop your tracks here": "Déposez vos morceaux ici",
+        "Release to add": "Relâchez pour ajouter",
+        "FILES OR FOLDERS · M4A · WAV · AIFF": "FICHIERS OU DOSSIERS · M4A · WAV · AIFF",
+        "Your MP3 files will appear here": "Vos MP3 apparaîtront ici",
     },
     "en": {},
     "da": {
@@ -113,6 +117,10 @@ CATALOGUES = {
         "Cancel": "Annuller",
         "Yes": "Ja",
         "No": "Nej",
+        "Drop your tracks here": "Slip dine numre her",
+        "Release to add": "Slip for at tilføje",
+        "FILES OR FOLDERS · M4A · WAV · AIFF": "FILER ELLER MAPPER · M4A · WAV · AIFF",
+        "Your MP3 files will appear here": "Dine MP3-filer vises her",
     },
 }
 

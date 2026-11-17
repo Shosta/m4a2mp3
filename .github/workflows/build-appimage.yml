@@ -42,6 +42,7 @@ jobs:
           --hidden-import ui.source_tree
           --hidden-import ui.result_tree
           --hidden-import ui.output_plan
+          --hidden-import ui.watermark
           --add-data m4a2mp3.png:.
           gui_qt.py
 

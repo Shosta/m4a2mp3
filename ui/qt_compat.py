@@ -1,6 +1,6 @@
 try:
-    from PyQt6.QtCore import QObject, QRunnable, QSize, Qt, QThreadPool, QSettings, pyqtSignal
-    from PyQt6.QtGui import QIcon, QPixmap
+    from PyQt6.QtCore import QObject, QPointF, QRectF, QRunnable, QSize, Qt, QThreadPool, QSettings, QTimer, pyqtSignal
+    from PyQt6.QtGui import QBrush, QColor, QFont, QIcon, QPainter, QPen, QPixmap, QRadialGradient
     from PyQt6.QtWidgets import (
         QAbstractItemView,
         QApplication,
@@ -27,8 +27,8 @@ try:
     )
 except ImportError:
     try:
-        from PyQt5.QtCore import QObject, QRunnable, QSize, Qt, QThreadPool, QSettings, pyqtSignal
-        from PyQt5.QtGui import QIcon, QPixmap
+        from PyQt5.QtCore import QObject, QPointF, QRectF, QRunnable, QSize, Qt, QThreadPool, QSettings, QTimer, pyqtSignal
+        from PyQt5.QtGui import QBrush, QColor, QFont, QIcon, QPainter, QPen, QPixmap, QRadialGradient
         from PyQt5.QtWidgets import (
             QAbstractItemView,
             QApplication,
