@@ -114,16 +114,6 @@ Avec `--sortie`, l'artiste et l'album sont lus dans les métadonnées du fichier
 ffmpeg -i "morceau.m4a" -map 0:a -map 0:v? -c:v copy -c:a libmp3lame -q:a 0 -id3v2_version 3 -map_metadata 0 "morceau.mp3"
 ```
 
-## Structure du dépôt
-
-| Chemin | Contenu |
-|--------|---------|
-| `m4a2mp3.py` | Interface en ligne de commande |
-| `gui_qt.py` | Point d'entrée de l'interface graphique Qt |
-| `core/`, `ui/` | Logique de conversion et composants de l'interface |
-| `docs/` | Site GitHub Pages |
-| `.github/workflows/` | Build de l'AppImage et déploiement du site |
-
 ## Remarques
 
 - M4A (AAC) et MP3 sont des formats avec perte : la conversion re-compresse l'audio. Avec `-q 0`, la dégradation est quasi inaudible.
