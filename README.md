@@ -73,6 +73,10 @@ winget install ffmpeg        # Windows
 
 ### Interface graphique Qt
 
+![État 1](<docs/assets/m4a2mp3 - 1.png>)
+![État 2](<docs/assets/m4a2mp3 - 2.png>)
+![État 3](<docs/assets/m4a2mp3 - 3.png>)
+
 ```bash
 python3 gui_qt.py
 ```
