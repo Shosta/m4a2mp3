@@ -42,12 +42,29 @@
         <p class="hero-footnote"><span data-i18n="sourceIntro">Vous préférez installer vous-même ?</span> <a href="https://github.com/Shosta/m4a2mp3" target="_blank" rel="noopener noreferrer" data-i18n="sourceLink">Voir le code source</a></p>
       </div>
 
-      <figure class="sleeve-figure">
+      <figure class="sleeve-figure" data-carousel aria-roledescription="carousel" data-i18n-aria-label="carouselLabel">
         <div class="sleeve-frame">
-          <img src="assets/interface-placeholder.svg" alt="" data-i18n-alt="placeholderAlt">
-          <div class="sleeve-sticker" data-i18n="placeholderLabel">APERÇU PROVISOIRE</div>
+          <div class="carousel-slide" data-carousel-panel role="group" aria-roledescription="slide" aria-label="1 / 3">
+            <img src="assets/m4a2mp3 - 1.png" alt="" data-i18n-alt="screenshotAlt1">
+          </div>
+          <div class="carousel-slide" data-carousel-panel role="group" aria-roledescription="slide" aria-label="2 / 3" hidden>
+            <img src="assets/m4a2mp3 - 2.png" alt="" data-i18n-alt="screenshotAlt2">
+          </div>
+          <div class="carousel-slide" data-carousel-panel role="group" aria-roledescription="slide" aria-label="3 / 3" hidden>
+            <img src="assets/m4a2mp3 - 3.png" alt="" data-i18n-alt="screenshotAlt3">
+          </div>
+          <button class="carousel-arrow carousel-previous" type="button" data-carousel-previous data-i18n-aria-label="previousSlide"><span aria-hidden="true">‹</span></button>
+          <button class="carousel-arrow carousel-next" type="button" data-carousel-next data-i18n-aria-label="nextSlide"><span aria-hidden="true">›</span></button>
         </div>
-        <figcaption><span data-i18n="figureCaption">FACE A · VOTRE BIBLIOTHÈQUE, EN MP3</span><span>001 / 003</span></figcaption>
+        <figcaption>
+          <span data-carousel-caption data-i18n="carouselCaption1">FACE A · VOTRE BIBLIOTHÈQUE, EN MP3</span>
+          <div class="carousel-indicators" data-i18n-aria-label="carouselIndicators" aria-label="Choisir une capture">
+            <button type="button" data-carousel-slide="0" data-i18n-aria-label="selectSlide1" aria-label="Afficher la capture 1" aria-current="true"></button>
+            <button type="button" data-carousel-slide="1" data-i18n-aria-label="selectSlide2" aria-label="Afficher la capture 2"></button>
+            <button type="button" data-carousel-slide="2" data-i18n-aria-label="selectSlide3" aria-label="Afficher la capture 3"></button>
+          </div>
+          <span data-carousel-counter aria-live="polite">001 / 003</span>
+        </figcaption>
       </figure>
       <div class="hero-side-note" aria-hidden="true">LOCAL<br>BY DESIGN</div>
     </section>
