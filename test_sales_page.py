@@ -81,6 +81,13 @@ class SalesPageTests(unittest.TestCase):
         self.assertEqual(urljoin(base, "assets/site.css"), "https://example.github.io/project/assets/site.css")
         self.assertEqual(urljoin(base, "assets/site.js"), "https://example.github.io/project/assets/site.js")
 
+    def test_pages_workflow_separates_artifact_upload_and_deployment(self):
+        workflow = (ROOT / ".github/workflows/deploy-pages.yml").read_text(encoding="utf-8")
+        self.assertRegex(workflow, r"(?m)^  build:\s*$")
+        self.assertRegex(workflow, r"(?m)^  deploy:\s*$")
+        self.assertRegex(workflow, r"(?m)^    needs: build$")
+        self.assertLess(workflow.index("uses: actions/upload-pages-artifact@"), workflow.index("uses: actions/deploy-pages@"))
+
     @unittest.skipUnless(shutil.which("chromium"), "Chromium is not installed")
     def test_carousel_controls_rotation_and_pause_in_chromium(self):
         probe = ROOT / "docs/.carousel-check.html"
