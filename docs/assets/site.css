@@ -70,10 +70,16 @@ h1 em { color: var(--gold); font-style: normal; }
 .hero-footnote { margin: 19px 0 0; color: var(--paper-muted); font-size: 11px; }
 .hero-footnote a { color: var(--paper); margin-left: 4px; }
 .sleeve-figure { position: relative; width: min(100%, 492px); margin: 0 auto; padding: 17px 17px 12px; background: var(--paper); color: var(--ink); box-shadow: 16px 20px 0 rgba(0, 0, 0, .16); transform: rotate(1.8deg); }
-.sleeve-frame { position: relative; overflow: hidden; aspect-ratio: 1 / 1; background: #bd442c; }
-.sleeve-frame img { display: block; width: 100%; height: 100%; object-fit: cover; }
-.sleeve-sticker { position: absolute; right: 12px; bottom: 12px; max-width: calc(100% - 24px); padding: 8px 10px; color: var(--ink); background: var(--paper); font-size: 11px; font-weight: 700; letter-spacing: .1em; }
-.sleeve-figure figcaption { display: flex; justify-content: space-between; gap: 12px; padding-top: 11px; font-size: 11px; font-weight: 700; letter-spacing: .1em; }
+.sleeve-frame { position: relative; overflow: hidden; aspect-ratio: 8 / 5; background: var(--ink-soft); }
+.carousel-slide { position: absolute; inset: 0; }
+.carousel-slide img { display: block; width: 100%; height: 100%; object-fit: contain; }
+.carousel-arrow { position: absolute; top: 50%; z-index: 1; width: 36px; height: 44px; transform: translateY(-50%); border: 0; color: var(--paper); background: rgba(16, 26, 43, .82); font-size: 28px; line-height: 1; cursor: pointer; }
+.carousel-previous { left: 8px; }
+.carousel-next { right: 8px; }
+.sleeve-figure figcaption { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding-top: 11px; font-size: 11px; font-weight: 700; letter-spacing: .1em; }
+.carousel-indicators { display: flex; align-items: center; gap: 7px; }
+.carousel-indicators button { width: 8px; height: 8px; padding: 0; border: 1px solid var(--ink); border-radius: 50%; background: transparent; cursor: pointer; }
+.carousel-indicators button[aria-current="true"] { background: var(--vermillion); border-color: var(--vermillion); }
 .hero-side-note { position: absolute; right: -43px; top: 46%; color: var(--paper-muted); font: 500 10px/1.5 var(--display); letter-spacing: .16em; writing-mode: vertical-rl; }
 
 .liner-notes, .workflow, .closing-note { width: min(1170px, calc(100% - 96px)); margin: 0 auto; }

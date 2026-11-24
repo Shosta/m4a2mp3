@@ -12,9 +12,19 @@ const translations = {
     downloadNote: "AppImage · Linux x86_64",
     sourceIntro: "Vous préférez installer vous-même ?",
     sourceLink: "Voir le code source",
-    placeholderAlt: "Illustration provisoire de l’interface, à remplacer par une capture d’écran de l’application.",
-    placeholderLabel: "APERÇU PROVISOIRE",
-    figureCaption: "FACE A · VOTRE BIBLIOTHÈQUE, EN MP3",
+    screenshotAlt1: "Application vide, prête à recevoir des fichiers audio.",
+    screenshotAlt2: "Liste des fichiers audio ajoutés à convertir.",
+    screenshotAlt3: "Résultats affichés après la conversion en MP3.",
+    carouselLabel: "Captures de l’application",
+    previousSlide: "Capture précédente",
+    nextSlide: "Capture suivante",
+    selectSlide1: "Afficher la capture 1",
+    selectSlide2: "Afficher la capture 2",
+    selectSlide3: "Afficher la capture 3",
+    carouselIndicators: "Choisir une capture",
+    carouselCaption1: "FACE A · VOTRE BIBLIOTHÈQUE, EN MP3",
+    carouselCaption2: "FACE A · VOS FICHIERS, PRÊTS À CONVERTIR",
+    carouselCaption3: "FACE B · VOS MP3 CONVERTIS",
     featureMark: "NOTES DE POCHETTE",
     featuresTitle: "Chaque détail<br>reste dans le sillon.",
     metadataTitle: "Les infos voyagent avec vous",
@@ -51,9 +61,19 @@ const translations = {
     downloadNote: "AppImage · Linux x86_64",
     sourceIntro: "Prefer to install it yourself?",
     sourceLink: "Browse the source code",
-    placeholderAlt: "Temporary interface illustration; replace with a screenshot of the application.",
-    placeholderLabel: "TEMPORARY PREVIEW",
-    figureCaption: "SIDE A · YOUR LIBRARY, IN MP3",
+    screenshotAlt1: "Empty app, ready for audio files.",
+    screenshotAlt2: "List of audio files added for conversion.",
+    screenshotAlt3: "Results shown after MP3 conversion.",
+    carouselLabel: "Application screenshots",
+    previousSlide: "Previous screenshot",
+    nextSlide: "Next screenshot",
+    selectSlide1: "Show screenshot 1",
+    selectSlide2: "Show screenshot 2",
+    selectSlide3: "Show screenshot 3",
+    carouselIndicators: "Choose a screenshot",
+    carouselCaption1: "SIDE A · YOUR LIBRARY, IN MP3",
+    carouselCaption2: "SIDE A · YOUR FILES, READY TO CONVERT",
+    carouselCaption3: "SIDE B · YOUR CONVERTED MP3S",
     featureMark: "LINER NOTES",
     featuresTitle: "Every detail<br>stays in the groove.",
     metadataTitle: "Your details come along",
@@ -90,9 +110,19 @@ const translations = {
     downloadNote: "AppImage · Linux x86_64",
     sourceIntro: "Vil du hellere selv installere?",
     sourceLink: "Se kildekoden",
-    placeholderAlt: "Midlertidig illustration af brugerfladen; udskift med et skærmbillede af programmet.",
-    placeholderLabel: "MIDLERTIDIG FORHÅNDSVISNING",
-    figureCaption: "SIDE A · DIT BIBLIOTEK, SOM MP3",
+    screenshotAlt1: "Tomt program, klar til lydfiler.",
+    screenshotAlt2: "Liste over lydfiler, der er tilføjet til konvertering.",
+    screenshotAlt3: "Resultater vist efter konvertering til MP3.",
+    carouselLabel: "Skærmbilleder af programmet",
+    previousSlide: "Forrige skærmbillede",
+    nextSlide: "Næste skærmbillede",
+    selectSlide1: "Vis skærmbillede 1",
+    selectSlide2: "Vis skærmbillede 2",
+    selectSlide3: "Vis skærmbillede 3",
+    carouselIndicators: "Vælg et skærmbillede",
+    carouselCaption1: "SIDE A · DIT BIBLIOTEK, SOM MP3",
+    carouselCaption2: "SIDE A · DINE FILER, KLAR TIL KONVERTERING",
+    carouselCaption3: "SIDE B · DINE KONVERTEREDE MP3-FILER",
     featureMark: "NOTER TIL OMSLAGET",
     featuresTitle: "Hver detalje<br>bliver i sporet.",
     metadataTitle: "Dine oplysninger følger med",
@@ -153,3 +183,58 @@ applyLanguage(initialLanguage);
 document.querySelector(".language-picker").addEventListener("change", (event) => {
   applyLanguage(event.currentTarget.value);
 });
+
+const carousel = document.querySelector("[data-carousel]");
+if (carousel) {
+  const slides = [...carousel.querySelectorAll("[data-carousel-panel]")];
+  const selectors = [...carousel.querySelectorAll("[data-carousel-slide]")];
+  const counter = carousel.querySelector("[data-carousel-counter]");
+  const caption = carousel.querySelector("[data-carousel-caption]");
+  const captionKeys = ["carouselCaption1", "carouselCaption2", "carouselCaption3"];
+  const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
+  let currentSlide = 0;
+  let timer;
+
+  function showSlide(index) {
+    currentSlide = (index + slides.length) % slides.length;
+    slides.forEach((slide, position) => {
+      slide.hidden = position !== currentSlide;
+      selectors[position].setAttribute("aria-current", String(position === currentSlide));
+    });
+    counter.textContent = `${String(currentSlide + 1).padStart(3, "0")} / ${String(slides.length).padStart(3, "0")}`;
+    caption.dataset.i18n = captionKeys[currentSlide];
+    caption.textContent = translations[document.documentElement.lang][captionKeys[currentSlide]];
+  }
+
+  function stopRotation() {
+    window.clearInterval(timer);
+  }
+
+  function startRotation() {
+    stopRotation();
+    if (!reducedMotion.matches && !carousel.matches(":hover, :focus-within")) {
+      timer = window.setInterval(() => showSlide(currentSlide + 1), 5000);
+    }
+  }
+
+  carousel.querySelector("[data-carousel-previous]").addEventListener("click", () => {
+    showSlide(currentSlide - 1);
+    startRotation();
+  });
+  carousel.querySelector("[data-carousel-next]").addEventListener("click", () => {
+    showSlide(currentSlide + 1);
+    startRotation();
+  });
+  selectors.forEach((selector, index) => selector.addEventListener("click", () => {
+    showSlide(index);
+    startRotation();
+  }));
+  carousel.addEventListener("mouseenter", stopRotation);
+  carousel.addEventListener("mouseleave", startRotation);
+  carousel.addEventListener("focusin", stopRotation);
+  carousel.addEventListener("focusout", (event) => {
+    if (!carousel.contains(event.relatedTarget)) startRotation();
+  });
+  reducedMotion.addEventListener("change", startRotation);
+  startRotation();
+}

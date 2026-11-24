@@ -11,7 +11,6 @@ from urllib.request import urlopen
 ROOT = Path(__file__).parent
 SCRIPT = ROOT / "docs/assets/site.js"
 HTML = ROOT / "docs/index.html"
-PLACEHOLDER = ROOT / "docs/assets/interface-placeholder.svg"
 
 
 class SalesPageTests(unittest.TestCase):
@@ -19,7 +18,6 @@ class SalesPageTests(unittest.TestCase):
     def setUpClass(cls):
         cls.script = SCRIPT.read_text(encoding="utf-8")
         cls.html = HTML.read_text(encoding="utf-8")
-        cls.placeholder = PLACEHOLDER.read_text(encoding="utf-8")
         cls.dictionaries = dict(re.findall(r"\b(fr|en|da):\s*\{(.*?)\n\s*\}", cls.script, re.S))
 
     def test_translations_have_matching_keys(self):
@@ -48,11 +46,28 @@ class SalesPageTests(unittest.TestCase):
         self.assertIn("https://github.com/Shosta/m4a2mp3", self.html)
         self.assertIn("AppImage", self.script)
 
-    def test_placeholder_is_marked_and_replaceable(self):
-        self.assertIn("placeholder", self.html.lower())
-        self.assertIn("interface-placeholder.svg", self.html)
-        self.assertIn("replace with a screenshot", self.script)
-        self.assertIn("audio record", self.placeholder.lower())
+    def test_hero_carousel_uses_three_screenshots_in_order(self):
+        paths = [
+            "assets/m4a2mp3 - 1.png",
+            "assets/m4a2mp3 - 2.png",
+            "assets/m4a2mp3 - 3.png",
+        ]
+        positions = [self.html.index(path) for path in paths]
+        self.assertEqual(positions, sorted(positions))
+        self.assertTrue(all((ROOT / "docs" / path).is_file() for path in paths))
+        self.assertIn("data-carousel", self.html)
+        self.assertIn("data-carousel-previous", self.html)
+        self.assertIn("data-carousel-next", self.html)
+        self.assertEqual(self.html.count("data-carousel-slide="), 3)
+
+    def test_carousel_has_manual_and_timed_navigation(self):
+        self.assertIn("data-carousel-previous", self.script)
+        self.assertIn("data-carousel-next", self.script)
+        self.assertIn("data-carousel-slide", self.script)
+        self.assertIn("5000", self.script)
+        self.assertIn("prefers-reduced-motion: reduce", self.script)
+        self.assertIn("mouseenter", self.script)
+        self.assertIn("focusin", self.script)
 
     def test_app_icon_is_used_as_favicon(self):
         self.assertIn('<link rel="icon" type="image/png" href="assets/m4a2mp3.png">', self.html)
@@ -65,6 +80,63 @@ class SalesPageTests(unittest.TestCase):
         base = "https://example.github.io/project/"
         self.assertEqual(urljoin(base, "assets/site.css"), "https://example.github.io/project/assets/site.css")
         self.assertEqual(urljoin(base, "assets/site.js"), "https://example.github.io/project/assets/site.js")
+
+    @unittest.skipUnless(shutil.which("chromium"), "Chromium is not installed")
+    def test_carousel_controls_rotation_and_pause_in_chromium(self):
+        probe = ROOT / "docs/.carousel-check.html"
+        probe.write_text(
+            """<!doctype html><iframe id=\"site\" src=\"/\"></iframe><pre id=\"result\"></pre>
+<script>
+const frame = document.querySelector('#site');
+frame.onload = () => {
+  const page = frame.contentWindow;
+  const doc = page.document;
+  const active = () => [...doc.querySelectorAll('[data-carousel-panel]')].findIndex(slide => !slide.hidden);
+  const result = { initial: active() };
+  doc.querySelector('[data-carousel-next]').click();
+  result.next = active();
+  doc.querySelector('[data-carousel-slide="0"]').click();
+  result.indicator = active();
+  doc.querySelector('[data-carousel-slide="2"]').click();
+  const language = doc.querySelector('.language-picker');
+  language.value = 'da';
+  language.dispatchEvent(new page.Event('change', { bubbles: true }));
+  result.translatedCaption = doc.querySelector('[data-carousel-caption]').textContent;
+  language.value = 'fr';
+  language.dispatchEvent(new page.Event('change', { bubbles: true }));
+  page.setTimeout(() => {
+    result.automatic = active();
+    doc.querySelector('[data-carousel]').dispatchEvent(new page.MouseEvent('mouseenter'));
+    page.setTimeout(() => {
+      result.paused = active();
+      document.querySelector('#result').textContent = JSON.stringify(result);
+    }, 5200);
+  }, 5200);
+};
+</script>""",
+            encoding="utf-8",
+        )
+        try:
+            output = subprocess.run(
+                [
+                    "chromium", "--headless", "--no-sandbox", "--disable-gpu",
+                    "--dump-dom", "--virtual-time-budget=12000",
+                    "http://127.0.0.1:8000/.carousel-check.html",
+                ],
+                check=True, capture_output=True, text=True,
+            ).stdout
+        finally:
+            probe.unlink(missing_ok=True)
+        match = re.search(r'<pre id="result">(.*?)</pre>', output, re.S)
+        self.assertIsNotNone(match, output)
+        self.assertEqual(json.loads(match.group(1)), {
+            "initial": 0,
+            "next": 1,
+            "indicator": 0,
+            "translatedCaption": "SIDE B · DINE KONVERTEREDE MP3-FILER",
+            "automatic": 0,
+            "paused": 0,
+        })
 
     @unittest.skipUnless(shutil.which("chromium"), "Chromium is not installed")
     def test_language_switch_and_mobile_width_in_chromium(self):
